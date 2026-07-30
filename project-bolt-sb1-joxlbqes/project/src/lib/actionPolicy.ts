@@ -79,7 +79,7 @@ function softmaxScores(pref: ActionType, topWeight: number): ActionScore[] {
   }).sort((x, y) => y.score - x.score);
 }
 
-export function decide(
+function decideLocal(
   customerId: string,
   customerName: string,
   riskScore: number,
@@ -92,7 +92,6 @@ export function decide(
     action: 'proactive_nudge' as ActionType,
     rationale: 'Default to a proactive nudge when the dominant driver is ambiguous.',
   };
-  // If risk is critical, bias toward human handoff regardless of driver.
   let chosen = rule.action;
   let topWeight = 0.46;
   if (riskBand === 'critical' && chosen !== 'human_handoff') {
@@ -117,6 +116,40 @@ export function decide(
     model_version: POLICY_MODEL_VERSION,
     timestamp: new Date().toISOString(),
   };
+}
+
+export async function decide(
+  customerId: string,
+  customerName: string,
+  riskScore: number,
+  riskBand: RiskBand,
+  topAttr: Attribution,
+  knowledgeResponse: string,
+  knowledgeConfidence: number
+): Promise<PolicyDecision> {
+  try {
+    const res = await fetch('http://localhost:8000/policy/decide', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_id: customerId,
+        customer_name: customerName,
+        risk_score: riskScore,
+        risk_band: riskBand,
+        top_attribution: topAttr.feature,
+        knowledge_response: knowledgeResponse,
+        knowledge_confidence: knowledgeConfidence,
+      }),
+    });
+    if (!res.ok) throw new Error(`Policy API returned ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to call Policy API, using local fallback:', err);
+    return decideLocal(
+      customerId, customerName, riskScore, riskBand,
+      topAttr, knowledgeResponse, knowledgeConfidence
+    );
+  }
 }
 
 // ---- Persistence: outcomes table ----
@@ -166,11 +199,17 @@ export async function logOutcome(
 }
 
 export async function retrain(): Promise<{ retrained: boolean; model_version: string }> {
-  // Simulate a retrain cycle. Real service would refit on new outcome labels.
-  await delay(900, 300);
-  const patch = POLICY_MODEL_VERSION.split('.');
-  const minor = parseInt(patch[2] ?? '0', 10) + 1;
-  return { retrained: true, model_version: `${patch[0]}.${patch[1]}.${minor}` };
+  try {
+    const res = await fetch('http://localhost:8000/policy/retrain', { method: 'POST' });
+    if (!res.ok) throw new Error(`Retrain API returned ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('Failed to call retrain API, using local fallback:', err);
+    await delay(900, 300);
+    const patch = POLICY_MODEL_VERSION.split('.');
+    const minor = parseInt(patch[2] ?? '0', 10) + 1;
+    return { retrained: true, model_version: `${patch[0]}.${patch[1]}.${minor}` };
+  }
 }
 
 export async function aggregate(): Promise<AggregateResponse> {

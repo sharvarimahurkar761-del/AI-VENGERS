@@ -14,7 +14,7 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
   think: { title: 'See the AI Think', subtitle: 'Watch the orchestrator reason across three subsystems' },
   customers: { title: 'Customers', subtitle: 'Every account, scored for churn risk and explained' },
   outcomes: { title: 'Feedback Loop', subtitle: 'Outcomes, root-cause aggregation, and policy retraining' },
-  health: { title: 'System Health', subtitle: 'Subsystem status, endpoints, and mock/live configuration' },
+  health: { title: 'System Health', subtitle: 'Subsystem status, endpoints, and live connectivity' },
   neural: { title: 'Neural Network', subtitle: 'Neural network policy visualization' },
   reinforcement: { title: 'Reinforcement Learning', subtitle: 'Learned from 2,400 past interventions' },
 };

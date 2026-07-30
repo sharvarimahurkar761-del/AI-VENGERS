@@ -59,12 +59,12 @@ export function Sidebar({
         })}
       </nav>
 
-      <div className="mt-3 rounded-xl border border-cyan-500/20 bg-cyan-950/30 p-3 backdrop-blur-md">
-        <div className="flex items-center gap-2 text-[11px] text-cyan-200 font-medium">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-          RAG & RL Agents Online
+      <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-950/30 p-3 backdrop-blur-md">
+        <div className="flex items-center gap-2 text-[11px] text-emerald-200 font-medium">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          All Services Live
         </div>
-        <div className="mt-1.5 text-[10px] text-slate-400">Microservices connected</div>
+        <div className="mt-1.5 text-[10px] text-slate-400">Real backends connected on :8000</div>
       </div>
     </aside>
   );

@@ -45,9 +45,6 @@ export function ReinforcementView() {
         <p className="text-sm text-slate-400">
           Learned from 2,400 past interventions: what worked to stop churn, and what the policy just improved.
         </p>
-        <div className="mt-2 rounded bg-amber-500/20 border border-amber-500/40 p-3 text-amber-200 text-sm">
-          <strong>Backend Pending:</strong> The <code>/policy/aggregate</code> and <code>/policy/retrain</code> endpoints do not exist in the RL service branch. The charts below use hardcoded placeholder data.
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">

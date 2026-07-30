@@ -14,9 +14,9 @@ export function Topbar({ title, subtitle, busy }: { title: string; subtitle: str
             <Cpu size={13} className="text-pulse-400" />
             <span className="font-mono text-[11px]">orchestrator v0.4</span>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-pulse-500/20 bg-pulse-500/10 px-3 py-1.5 text-xs text-pulse-200">
-            {busy ? <Spinner size={12} /> : <Sparkles size={13} />}
-            <span>{busy ? 'Analyzing…' : 'Mock mode'}</span>
+          <div className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${busy ? 'border-pulse-500/20 bg-pulse-500/10 text-pulse-200' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-200'}`}>
+            {busy ? <Spinner size={12} /> : <Sparkles size={13} className="text-emerald-300" />}
+            <span>{busy ? 'Analyzing…' : 'Live mode'}</span>
           </div>
         </div>
       </div>

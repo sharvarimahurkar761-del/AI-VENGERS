@@ -59,8 +59,7 @@ export async function analyze(
   stages[2].status = 'running';
   stages[2].startedAt = Date.now();
   emit();
-  await new Promise((r) => setTimeout(r, 360 + Math.random() * 180));
-  const decision = decide(
+  const decision = await decide(
     customerId,
     customer.name,
     risk.risk_score,

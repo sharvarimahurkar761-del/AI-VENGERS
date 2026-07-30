@@ -1,34 +1,35 @@
-import { useState } from 'react';
-import { Cpu, Gauge, FileText, Server, Zap, Activity, ToggleLeft, ToggleRight, Check, AlertTriangle } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { Cpu, Gauge, FileText, Server, Zap, Activity, Check, XCircle, RefreshCw } from 'lucide-react';
 import { RISK_MODEL_VERSION } from '@/lib/riskEngine';
 import { KNOWLEDGE_MODEL_VERSION } from '@/lib/knowledgeAssistant';
 import { POLICY_MODEL_VERSION } from '@/lib/actionPolicy';
-import { Card, SectionTitle } from '@/components/ui/Card';
+import { Card, SectionTitle, Spinner } from '@/components/ui/Card';
 
-interface ServiceStatus {
+interface LiveServiceStatus {
   key: string;
   name: string;
   endpoint: string;
+  healthUrl: string;
   method: string;
   model: string;
-  latencyMs: number;
-  healthy: boolean;
-  mode: 'mock' | 'live';
   icon: typeof Gauge;
   accent: string;
   desc: string;
+  // Live status (filled by health check)
+  healthy: boolean;
+  latencyMs: number | null;
+  lastChecked: string | null;
+  checking: boolean;
 }
 
-const SERVICES: ServiceStatus[] = [
+const SERVICES_CONFIG: Omit<LiveServiceStatus, 'healthy' | 'latencyMs' | 'lastChecked' | 'checking'>[] = [
   {
     key: 'risk',
     name: 'Risk & Behavior Engine',
-    endpoint: '/risk/score/{user_id}',
-    method: 'GET',
+    endpoint: '/shap/risk/score',
+    healthUrl: 'http://localhost:8000/shap/risk/score',
+    method: 'POST',
     model: RISK_MODEL_VERSION,
-    latencyMs: 420,
-    healthy: true,
-    mode: 'mock',
     icon: Gauge,
     accent: 'text-pulse-300',
     desc: 'PyTorch churn model + SHAP explainability. Scores 0..1 risk and returns signed attributions.',
@@ -36,12 +37,10 @@ const SERVICES: ServiceStatus[] = [
   {
     key: 'knowledge',
     name: 'Knowledge Assistant',
-    endpoint: '/knowledge/respond',
+    endpoint: '/rag/knowledge/respond',
+    healthUrl: 'http://localhost:8000/rag/knowledge/respond',
     method: 'POST',
     model: KNOWLEDGE_MODEL_VERSION,
-    latencyMs: 520,
-    healthy: true,
-    mode: 'mock',
     icon: FileText,
     accent: 'text-sky-300',
     desc: 'RAG + fine-tuned LLM (LoRA/QLoRA). Grounds responses in company docs with retrieval confidence.',
@@ -49,46 +48,86 @@ const SERVICES: ServiceStatus[] = [
   {
     key: 'policy',
     name: 'Action Policy & Feedback Loop',
-    endpoint: '/policy/decide · /policy/outcome · /policy/retrain · /policy/aggregate',
-    method: 'POST/GET',
+    endpoint: '/policy/decide',
+    healthUrl: 'http://localhost:8000/policy/decide',
+    method: 'POST',
     model: POLICY_MODEL_VERSION,
-    latencyMs: 360,
-    healthy: true,
-    mode: 'live',
     icon: Cpu,
     accent: 'text-emerald-300',
     desc: 'Picks 1 of 4 actions from the dominant risk driver. Logs outcomes, retrains, aggregates root causes.',
   },
   {
     key: 'orchestrator',
-    name: 'Application Orchestrator',
-    endpoint: '/analyze (internal)',
-    method: '—',
+    name: 'Unified Backend',
+    endpoint: '/health',
+    healthUrl: 'http://localhost:8000/health',
+    method: 'GET',
     model: 'orchestrator v0.4',
-    latencyMs: 1300,
-    healthy: true,
-    mode: 'live',
     icon: Server,
     accent: 'text-violet-300',
     desc: 'FastAPI backend sequencing P1 → P2 → P3 → persistence and exposing results to the dashboard.',
   },
 ];
 
-export function HealthView() {
-  const [modes, setModes] = useState<Record<string, 'mock' | 'live'>>(
-    Object.fromEntries(SERVICES.map((s) => [s.key, s.mode]))
-  );
-
-  function toggle(key: string) {
-    setModes((m) => ({ ...m, [key]: m[key] === 'mock' ? 'live' : 'mock' }));
+async function checkHealth(url: string, method: string): Promise<{ ok: boolean; latencyMs: number }> {
+  const start = performance.now();
+  try {
+    const res = await fetch(url, {
+      method: method === 'GET' ? 'GET' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(5000),
+      ...(method === 'POST' ? { body: JSON.stringify({}) } : {}),
+    });
+    const latencyMs = Math.round(performance.now() - start);
+    // We consider any response (even 422 for missing fields) as "service is alive"
+    return { ok: res.status < 500, latencyMs };
+  } catch {
+    const latencyMs = Math.round(performance.now() - start);
+    return { ok: false, latencyMs };
   }
+}
+
+export function HealthView() {
+  const [services, setServices] = useState<LiveServiceStatus[]>(
+    SERVICES_CONFIG.map((s) => ({ ...s, healthy: false, latencyMs: null, lastChecked: null, checking: true }))
+  );
+  const [refreshing, setRefreshing] = useState(false);
+
+  const runHealthChecks = useCallback(async () => {
+    setRefreshing(true);
+    setServices((prev) => prev.map((s) => ({ ...s, checking: true })));
+
+    const results = await Promise.all(
+      SERVICES_CONFIG.map(async (s) => {
+        const { ok, latencyMs } = await checkHealth(s.healthUrl, s.method);
+        return { key: s.key, healthy: ok, latencyMs, lastChecked: new Date().toISOString() };
+      })
+    );
+
+    setServices((prev) =>
+      prev.map((s) => {
+        const result = results.find((r) => r.key === s.key);
+        return result ? { ...s, ...result, checking: false } : { ...s, checking: false };
+      })
+    );
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    runHealthChecks();
+    const interval = setInterval(runHealthChecks, 30000);
+    return () => clearInterval(interval);
+  }, [runHealthChecks]);
+
+  const allHealthy = services.every((s) => s.healthy && !s.checking);
+  const someDown = services.some((s) => !s.healthy && !s.checking);
 
   return (
     <div className="space-y-6">
       <SectionTitle
         eyebrow="System health"
-        title="Subsystem status & endpoint map"
-        desc="PulseIQ is three subsystems plus an orchestration layer. Mock/live toggles show how the frontend swaps endpoints with no interface changes."
+        title="Live subsystem status & endpoint map"
+        desc="PulseIQ is three AI subsystems plus an orchestration layer. Status is auto-detected from live health checks against the backend."
       />
 
       {/* Architecture diagram */}
@@ -114,11 +153,39 @@ export function HealthView() {
         </div>
       </Card>
 
+      {/* Overall status + refresh */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {allHealthy ? (
+            <span className="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+              All systems operational
+            </span>
+          ) : someDown ? (
+            <span className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300">
+              <span className="h-2 w-2 rounded-full bg-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.8)]" />
+              {services.filter((s) => !s.healthy && !s.checking).length} service(s) unreachable
+            </span>
+          ) : (
+            <span className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-400">
+              <Spinner size={12} /> Checking…
+            </span>
+          )}
+        </div>
+        <button
+          onClick={runHealthChecks}
+          disabled={refreshing}
+          className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2 text-sm text-slate-300 transition hover:bg-white/10 disabled:opacity-40"
+        >
+          <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
+
       {/* Service cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        {SERVICES.map((s, i) => {
+        {services.map((s) => {
           const Icon = s.icon;
-          const mode = modes[s.key];
           return (
             <Card key={s.key} className="relative overflow-hidden p-5 animate-fadeUp" >
               <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-pulse-500/5 blur-2xl" />
@@ -135,9 +202,19 @@ export function HealthView() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="flex items-center gap-1 text-[11px] text-emerald-300">
-                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> healthy
-                  </span>
+                  {s.checking ? (
+                    <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                      <Spinner size={11} /> checking
+                    </span>
+                  ) : s.healthy ? (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-300">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> live
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[11px] text-rose-300">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-400" /> offline
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -153,25 +230,29 @@ export function HealthView() {
                   <span className="text-slate-300">{s.method}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-500">p50 latency</span>
-                  <span className="flex items-center gap-1 text-slate-300"><Zap size={10} className="text-amber-300" /> {s.latencyMs}ms</span>
+                  <span className="text-slate-500">latency</span>
+                  <span className="flex items-center gap-1 text-slate-300">
+                    <Zap size={10} className="text-amber-300" />
+                    {s.latencyMs !== null ? `${s.latencyMs}ms` : '—'}
+                  </span>
                 </div>
               </div>
 
               <div className="mt-4 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs">
-                  {mode === 'live' ? (
-                    <span className="flex items-center gap-1.5 text-emerald-300"><Check size={13} /> Live endpoint</span>
+                  {s.checking ? (
+                    <span className="flex items-center gap-1.5 text-slate-400"><Spinner size={13} /> Checking connectivity…</span>
+                  ) : s.healthy ? (
+                    <span className="flex items-center gap-1.5 text-emerald-300"><Check size={13} /> Live endpoint responding</span>
                   ) : (
-                    <span className="flex items-center gap-1.5 text-amber-300"><AlertTriangle size={13} /> Mock (schema-matched)</span>
+                    <span className="flex items-center gap-1.5 text-rose-300"><XCircle size={13} /> Endpoint unreachable</span>
                   )}
                 </div>
-                <button
-                  onClick={() => toggle(s.key)}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 transition hover:text-slate-200"
-                >
-                  {mode === 'live' ? <ToggleRight size={22} className="text-emerald-400" /> : <ToggleLeft size={22} className="text-slate-500" />}
-                </button>
+                {s.lastChecked && (
+                  <span className="text-[10px] text-slate-600">
+                    checked {new Date(s.lastChecked).toLocaleTimeString()}
+                  </span>
+                )}
               </div>
             </Card>
           );
@@ -181,10 +262,10 @@ export function HealthView() {
       <Card className="p-5">
         <h3 className="font-display text-base font-semibold text-slate-100">Integration notes</h3>
         <ul className="mt-3 space-y-2.5 text-sm text-slate-400">
-          <li className="flex gap-2"><span className="text-pulse-400">•</span> P1 and P2 are mocked against their published schemas. Swapping to live endpoints requires only changing the base URL in the service modules — no interface changes.</li>
-          <li className="flex gap-2"><span className="text-pulse-400">•</span> P3 (action policy) is the real, tested FastAPI service. It already runs against mocked P1/P2 outputs and is ready to consume live ones.</li>
-          <li className="flex gap-2"><span className="text-pulse-400">•</span> The orchestrator sequences P1 → P2 → P3 and persists every decision to the feedback loop so retraining has labeled data.</li>
-          <li className="flex gap-2"><span className="text-pulse-400">•</span> Action choice depends on <em>which</em> attribution drove the risk score — same score from <code className="rounded bg-white/5 px-1 text-pulse-200">onboarding_confusion</code> picks a tutorial, from <code className="rounded bg-white/5 px-1 text-pulse-200">repeated_failures</code> picks a human handoff.</li>
+          <li className="flex gap-2"><span className="text-emerald-400">•</span> All three AI subsystems (Risk Engine, Knowledge Assistant, Action Policy) call the live FastAPI backend on port 8000.</li>
+          <li className="flex gap-2"><span className="text-emerald-400">•</span> If a backend service is unreachable, the frontend falls back to local logic and clearly flags the result as a fallback in the UI.</li>
+          <li className="flex gap-2"><span className="text-emerald-400">•</span> The orchestrator sequences P1 → P2 → P3 and persists every decision to the feedback loop so retraining has labeled data.</li>
+          <li className="flex gap-2"><span className="text-emerald-400">•</span> Action choice depends on <em>which</em> attribution drove the risk score — same score from <code className="rounded bg-white/5 px-1 text-pulse-200">onboarding_confusion</code> picks a tutorial, from <code className="rounded bg-white/5 px-1 text-pulse-200">repeated_failures</code> picks a human handoff.</li>
         </ul>
       </Card>
     </div>

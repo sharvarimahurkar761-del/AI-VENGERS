@@ -84,8 +84,7 @@ export function ThinkView({ initialCustomerId }: { initialCustomerId?: string })
       // 3. Action policy
       setPhase('policy');
       setStage(2, 'running');
-      await wait(420);
-      const decision = decide(
+      const decision = await decide(
         customerId,
         customer.name,
         r.risk_score,
@@ -567,9 +566,6 @@ function PolicyPanel({
         sub="Picks one of 4 actions from the root-cause driver"
         version={decision?.model_version}
       />
-      <div className="mt-2 rounded bg-amber-500/20 border border-amber-500/40 p-2 text-amber-200 text-xs">
-        <strong>Backend Pending:</strong> No <code>/policy/decide</code> endpoint exists. Using local frontend fallback for action selection.
-      </div>
 
       {loading && <SkeletonRows />}
 
