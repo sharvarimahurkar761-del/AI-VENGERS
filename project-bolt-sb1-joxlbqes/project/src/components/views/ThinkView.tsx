@@ -632,9 +632,45 @@ function PolicyPanel({
           </div>
 
           {outcomeId && (
-            <div className="mt-4 flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2 text-[11px] text-slate-500">
-              <Check size={12} className="text-emerald-400" />
-              Decision logged to feedback loop · id {outcomeId.slice(0, 8)}
+            <div className="mt-4 flex flex-col gap-2 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-3 text-[11px] text-slate-500">
+              <div className="flex items-center gap-2">
+                <Check size={12} className="text-emerald-400" />
+                Decision logged to feedback loop · id {outcomeId.slice(0, 8)}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    fetch('http://localhost:8000/rl/feedback', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        user_id: decision.selected_action,
+                        action: decision.selected_action,
+                        feedback: 'thumbs_up'
+                      })
+                    }).then(() => console.log('Thumbs up sent'));
+                  }}
+                  className="rounded bg-emerald-500/20 px-3 py-1.5 text-emerald-300 transition hover:bg-emerald-500/30"
+                >
+                  👍 Good Choice
+                </button>
+                <button
+                  onClick={() => {
+                    fetch('http://localhost:8000/rl/feedback', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        user_id: decision.selected_action,
+                        action: decision.selected_action,
+                        feedback: 'thumbs_down'
+                      })
+                    }).then(() => console.log('Thumbs down sent'));
+                  }}
+                  className="rounded bg-rose-500/20 px-3 py-1.5 text-rose-300 transition hover:bg-rose-500/30"
+                >
+                  👎 Bad Choice
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -53,10 +53,10 @@ export function ReinforcementView() {
         <div className="flex flex-col space-y-6">
           
           {/* Reward per episode Chart */}
-          <div className="panel flex flex-col p-5 bg-gradient-to-br from-ink-900/90 to-ink-950/90 border border-white/5 rounded-xl shadow-lg relative overflow-hidden group hover:border-white/10 transition-colors">
+          <div className="card flex flex-col p-5 relative overflow-hidden group">
             <div className="flex justify-between items-center mb-4">
               <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">Reward per episode</span>
-              <span className="text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">Episode #2401</span>
+              <span className="text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded-md border border-cyan-500/20 shadow-[0_0_10px_rgba(34,211,238,0.2)]">Episode #2401</span>
             </div>
             
             <div className="relative h-32 w-full mt-2">
@@ -104,7 +104,7 @@ export function ReinforcementView() {
           </div>
 
           {/* Past 24 similar customers */}
-          <div className="panel flex flex-col p-5 bg-gradient-to-br from-ink-900/90 to-ink-950/90 border border-white/5 rounded-xl shadow-lg relative overflow-hidden group hover:border-white/10 transition-colors">
+          <div className="card flex flex-col p-5 relative overflow-hidden group">
             <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-4">Past 24 similar customers — outcome</h3>
             <div className="flex items-end justify-between h-20 gap-1 mt-auto">
               {Array.from({ length: 24 }).map((_, i) => {
@@ -118,7 +118,7 @@ export function ReinforcementView() {
                       className={cn(
                         "w-full rounded-t-sm transition-all duration-300",
                         isSuccess 
-                          ? "bg-pulse-500 shadow-[0_0_8px_rgba(0,229,255,0.4)]" 
+                          ? "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]" 
                           : "bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]"
                       )}
                       style={{ 
@@ -142,37 +142,37 @@ export function ReinforcementView() {
         <div className="flex flex-col space-y-6">
           
           {/* Suggested Next Action */}
-          <div className="panel flex flex-col p-6 bg-amber-500/10 border border-amber-500/20 rounded-xl shadow-lg relative overflow-hidden group hover:border-amber-500/30 transition-colors">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-50" />
+          <div className="card flex flex-col p-6 relative overflow-hidden group border-cyan-500/30 bg-cyan-950/20">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-50" />
             
             <div className="flex justify-between items-center mb-5">
-              <span className="text-[10px] font-bold tracking-wider text-amber-500 uppercase flex items-center gap-1.5">
+              <span className="text-[10px] font-bold tracking-wider text-cyan-400 uppercase flex items-center gap-1.5">
                 <ShieldAlert className="w-3.5 h-3.5" />
                 Suggested next action
               </span>
-              <span className="text-xs font-mono font-medium text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-500/20 shadow-[0_0_10px_rgba(255,183,3,0.2)]">
+              <span className="text-xs font-mono font-medium text-cyan-100 bg-cyan-500/20 px-2 py-0.5 rounded-full border border-cyan-500/30 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
                 71% confidence
               </span>
             </div>
             
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2.5 bg-amber-500/20 rounded-lg border border-amber-500/30 text-amber-400">
+              <div className="p-2.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 text-cyan-300">
                 <ChevronRight className="w-6 h-6" />
               </div>
-              <h3 className="text-2xl font-semibold tracking-tight text-amber-50">Proactive Nudge</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">Proactive Nudge</h3>
             </div>
             
-            <p className="text-sm text-amber-200/80 leading-relaxed mt-2">
+            <p className="text-sm text-slate-300 leading-relaxed mt-2">
               Based on this customer's behavior cluster, a proactive nudge outperforms other interventions. 
-              <strong className="text-amber-100 font-medium px-1">340 similar past cases</strong> saw churn drop by 
-              <strong className="text-pulse-400 font-mono ml-1 shadow-[0_0_8px_rgba(0,229,255,0.3)]">34%</strong> vs. 11% for a generic guided tutorial.
+              <strong className="text-cyan-100 font-medium px-1">340 similar past cases</strong> saw churn drop by 
+              <strong className="text-cyan-400 font-mono ml-1 shadow-[0_0_10px_rgba(34,211,238,0.4)]">34%</strong> vs. 11% for a generic guided tutorial.
             </p>
           </div>
 
           {/* Policy Re-weighting */}
-          <div className="panel flex flex-col flex-1 p-5 bg-gradient-to-br from-ink-900/90 to-ink-950/90 border border-white/5 rounded-xl shadow-lg relative overflow-hidden group hover:border-white/10 transition-colors">
+          <div className="card flex flex-col flex-1 p-5 relative overflow-hidden group">
             <h3 className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-6 flex items-center gap-2">
-              <TrendingUp className="w-3.5 h-3.5 text-pulse-500" />
+              <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
               Policy re-weighting this cycle
             </h3>
             
@@ -202,7 +202,7 @@ export function ReinforcementView() {
                         className={cn(
                           "absolute top-0 left-0 h-full rounded-full transition-all duration-75",
                           isWinner 
-                            ? "bg-gradient-to-r from-pulse-600 to-pulse-400 shadow-[0_0_10px_rgba(0,229,255,0.5)]" 
+                            ? "bg-gradient-to-r from-cyan-600 to-cyan-400 shadow-[0_0_12px_rgba(34,211,238,0.6)]" 
                             : "bg-slate-600"
                         )}
                         style={{ width: `${currentAnimatedVal}%` }}

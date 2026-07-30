@@ -36,11 +36,12 @@ function App() {
   const meta = META[view];
 
   return (
-    <div className="flex min-h-screen w-full bg-ink-950">
+    <div className="flex min-h-screen w-full bg-[#04070d] text-slate-200">
       {/* Ambient background glow */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute left-1/4 top-0 h-[400px] w-[600px] rounded-full bg-pulse-600/10 blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 h-[300px] w-[500px] rounded-full bg-violet-600/5 blur-[120px]" />
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute left-1/4 -top-32 h-[500px] w-[700px] rounded-full bg-cyan-600/20 blur-[140px] mix-blend-screen animate-pulseGlow" />
+        <div className="absolute -bottom-32 right-1/4 h-[400px] w-[600px] rounded-full bg-violet-600/20 blur-[120px] mix-blend-screen" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[1200px] rounded-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/10 via-[#04070d]/0 to-transparent blur-[100px]" />
       </div>
 
       <Sidebar view={view} onNavigate={navigate} />
