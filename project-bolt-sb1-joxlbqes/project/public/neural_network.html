@@ -1,0 +1,2419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neural Network Sandbox & Visualizer</title>
+  <!-- Google Fonts for premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Premium Dark Theme Styles matching 3Blue1Brown Aesthetics */
+    :root {
+      --bg-color: #040508; /* Deeper black for ultimate contrast */
+      --panel-bg: linear-gradient(145deg, rgba(16, 20, 30, 0.8), rgba(7, 9, 13, 0.9));
+      --border-color: rgba(255, 255, 255, 0.06);
+      --text-color: #f1f3f9;
+      --text-muted: #8e99a7;
+      
+      /* Neon/Pastel Glow Colors */
+      --primary: #00e5ff;      /* Electric Cyan (Positive Weights) */
+      --primary-glow: rgba(0, 229, 255, 0.4);
+      --secondary: #ff5500;    /* Amber-Orange/Red (Negative Weights) */
+      --secondary-glow: rgba(255, 85, 0, 0.4);
+      --accent: #ffb703;       /* Gold (Active Neurons) */
+      --accent-glow: rgba(255, 183, 3, 0.45);
+      
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-sans);
+      overflow: hidden; /* Force one screen, no body scrolling */
+      padding: 12px;
+      height: 100vh;
+      min-height: 100vh;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Dashboard Layout - Fits strictly on one screen */
+    .app-container {
+      display: grid;
+      grid-template-columns: 260px 1fr 300px;
+      grid-template-rows: auto 1fr 125px; /* Header, Main, Bottom */
+      gap: 12px;
+      width: 100%;
+      height: 100%;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 10px;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #fff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header h1 span {
+      font-weight: 300;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-left: 8px;
+    }
+
+    .badge-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    .badge {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      border-radius: 5px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-color);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    .badge span {
+      color: var(--primary);
+      text-shadow: 0 0 6px var(--primary-glow);
+      font-weight: 600;
+    }
+
+    /* Panel Base with Glassmorphism and Inset border */
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(12px);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      height: 100%;
+      overflow: hidden;
+      transition: border-color 0.3s ease;
+    }
+
+    .panel:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Left Panel: Drawing / Classifier */
+    .left-panel {
+      grid-column: 1;
+    }
+
+    .panel-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-color);
+      border-left: 3px solid var(--primary);
+      padding-left: 6px;
+      margin-bottom: 2px;
+    }
+
+    .canvas-container {
+      position: relative;
+      width: 160px;
+      height: 160px;
+      margin: 0 auto;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      box-shadow: 0 0 8px rgba(0, 0, 0, 0.45), inset 0 0 6px rgba(0,0,0,0.75);
+      cursor: crosshair;
+      overflow: hidden;
+    }
+
+    #drawingCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .canvas-controls {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255,255,255,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #050608;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: #00f0ff;
+      border-color: #00f0ff;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 85, 0, 0.06);
+      border-color: rgba(255, 85, 0, 0.15);
+      color: #ff6a1a;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 85, 0, 0.15);
+      border-color: rgba(255, 85, 0, 0.25);
+    }
+
+    /* Output Bars - Glowing Meter Aesthetic */
+    .output-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .output-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .output-label {
+      font-size: 0.8rem;
+      width: 50px;
+      text-align: right;
+      color: var(--text-muted);
+      transition: color 0.2s ease;
+    }
+
+    .output-bar-bg {
+      flex: 1;
+      height: 12px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.01);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+    }
+
+    .output-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(88, 52, 235, 0.6), var(--primary));
+      border-radius: 3px;
+      transition: width 0.15s ease-out, background-color 0.2s ease;
+      box-shadow: 0 0 4px var(--primary-glow);
+    }
+
+    .output-row.predicted .output-bar-fill {
+      background: linear-gradient(90deg, #ff7b00, var(--accent));
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .output-row.predicted .output-label {
+      color: var(--accent);
+      font-weight: 600;
+      text-shadow: 0 0 5px rgba(255, 183, 3, 0.2);
+    }
+
+    .output-val {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      width: 36px;
+      text-align: right;
+    }
+
+    /* Center Panel: Network visualizer */
+    .center-panel {
+      grid-column: 2;
+      position: relative;
+      padding: 8px;
+      height: 100%;
+    }
+
+    #networkCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      border-radius: 6px;
+      background: #000;
+      box-shadow: inset 0 0 14px rgba(0, 229, 255, 0.04);
+    }
+
+    /* Right Panel: Controls & Charts */
+    .right-panel {
+      grid-column: 3;
+      overflow-y: auto;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .control-label span {
+      font-family: var(--font-mono);
+      color: var(--primary);
+      text-shadow: 0 0 4px var(--primary-glow);
+    }
+
+    .slider {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.06);
+      outline: none;
+    }
+
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary-glow);
+      cursor: pointer;
+      transition: transform 0.1s ease, background-color 0.2s ease;
+    }
+
+    .slider::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+      background: #fff;
+    }
+
+    .select-dropdown {
+      width: 100%;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      padding: 6px 10px;
+      border-radius: 5px;
+      font-size: 0.78rem;
+      outline: none;
+      cursor: pointer;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    .select-dropdown option {
+      background: #0d0f14;
+      color: var(--text-color);
+    }
+
+    /* Charts Canvas Containers */
+    .chart-container {
+      height: 75px;
+      position: relative;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.3);
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+    .chart-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Bottom Panel: Math caption / Slow motion step info */
+    .bottom-panel {
+      grid-column: 1 / -1;
+      height: 100%;
+      padding: 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+
+    .step-stepper {
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 6px;
+      margin-bottom: 2px;
+    }
+
+    .step-stepper h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    .stepper-nav {
+      display: flex;
+      gap: 6px;
+    }
+
+    .math-info-display {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 16px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .math-column {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .math-formula {
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+      white-space: nowrap;
+      line-height: 1.35;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.6);
+    }
+
+    .math-formula span.hl-w {
+      color: var(--primary);
+      text-shadow: 0 0 3px rgba(0, 229, 255, 0.3);
+    }
+    .math-formula span.hl-a {
+      color: var(--accent);
+      text-shadow: 0 0 3px rgba(255, 183, 3, 0.3);
+    }
+    .math-formula span.hl-b {
+      color: var(--secondary);
+      text-shadow: 0 0 3px rgba(255, 85, 0, 0.3);
+    }
+
+    .caption-text {
+      font-size: 0.82rem;
+      line-height: 1.4;
+      color: var(--text-muted);
+      overflow-y: auto;
+      max-height: 80px;
+    }
+
+    .math-formula-title {
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    /* Grid shape helpers */
+    .shape-presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .shape-presets .btn {
+      padding: 3px;
+      font-size: 0.72rem;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-row .btn {
+      flex: 1;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+      .app-container {
+        grid-template-columns: 240px 1fr;
+        grid-template-rows: auto auto 1fr auto;
+      }
+      .right-panel {
+        grid-column: 1;
+        grid-row: 3;
+      }
+      .center-panel {
+        grid-column: 2;
+        grid-row: 3;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- Top Header Bar -->
+    <header>
+      <h1>NN Sandbox</h1>
+      <div class="badge-container">
+        <div class="badge">Epoch: <span id="epochBadge">0</span></div>
+        <div class="badge">Loss: <span id="lossBadge">0.0000</span></div>
+        <div class="badge">Accuracy: <span id="accuracyBadge">0.0%</span></div>
+        <div class="badge">Config: <span id="configBadge">Modern</span></div>
+      </div>
+    </header>
+
+    <!-- Left Panel: Drawing pad and inputs -->
+    <div class="panel left-panel">
+      <div>
+        <div class="panel-title">Interactive Input</div>
+        <p style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+          Draw a shape or click a preset. The network will classify live!
+        </p>
+      </div>
+
+      <div class="canvas-container">
+        <canvas id="drawingCanvas" width="160" height="160"></canvas>
+      </div>
+
+      <div class="canvas-controls">
+        <button class="btn btn-secondary" id="clearBtn">Clear</button>
+        <button class="btn btn-primary" id="predictBtn" style="display:none;">Classify</button>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Draw Presets</div>
+        <div class="shape-presets">
+          <button class="btn" onclick="drawPresetShape(0)">Square</button>
+          <button class="btn" onclick="drawPresetShape(1)">Line</button>
+          <button class="btn" onclick="drawPresetShape(2)">Cross</button>
+          <button class="btn" onclick="drawPresetShape(3)">Circle</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel-title" style="margin-bottom: 6px;">Network Output</div>
+        <div class="output-container">
+          <div class="output-row" id="outRow-0">
+            <div class="output-label">Square:</div>
+            <div class="output-bar-bg"><div class="output-bar-fill" id="outBar-0"></div></div>
+            <div class="output-val" id="outVal-0">0%</div>
+          </div>
+          <div class="output-row" id="outRow-1">
+            <div class="output-label">Line:</div>
+            <div class="output-bar-bg"><div class="output-bar-fill" id="outBar-1"></div></div>
+            <div class="output-val" id="outVal-1">0%</div>
+          </div>
+          <div class="output-row" id="outRow-2">
+            <div class="output-label">Cross:</div>
+            <div class="output-bar-bg"><div class="output-bar-fill" id="outBar-2"></div></div>
+            <div class="output-val" id="outVal-2">0%</div>
+          </div>
+          <div class="output-row" id="outRow-3">
+            <div class="output-label">Circle:</div>
+            <div class="output-bar-bg"><div class="output-bar-fill" id="outBar-3"></div></div>
+            <div class="output-val" id="outVal-3">0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center Panel: Network visualizer -->
+    <div class="panel center-panel">
+      <canvas id="networkCanvas"></canvas>
+    </div>
+
+    <!-- Right Panel: Controls & Charts -->
+    <div class="panel right-panel">
+      <div class="panel-title">Training Panel</div>
+      
+      <div class="action-row">
+        <button class="btn btn-primary" id="trainBtn">Train (Play)</button>
+        <button class="btn" id="stepBatchBtn">Step Batch</button>
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Learning Rate <span id="lrVal">0.5</span></div>
+        <input type="range" class="slider" id="lrSlider" min="0.05" max="2.0" step="0.05" value="0.8">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Batch Size <span id="batchVal">10</span></div>
+        <input type="range" class="slider" id="batchSlider" min="1" max="50" step="1" value="12">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Train Speed <span id="speedVal">3x</span></div>
+        <input type="range" class="slider" id="speedSlider" min="1" max="10" step="1" value="4">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Dataset Noise <span id="noiseVal">5%</span></div>
+        <input type="range" class="slider" id="noiseSlider" min="0" max="30" step="1" value="4">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Preset Architecture</div>
+        <select class="select-dropdown" id="presetSelect">
+          <option value="modern">Modern Preset (Leaky ReLU + Softmax + Cross-Entropy)</option>
+          <option value="classic">Classic Preset (Sigmoid + Sigmoid + MSE)</option>
+        </select>
+      </div>
+
+      <div class="action-row">
+        <button class="btn" id="resetBtn" style="font-size:0.75rem;">Reset Weights</button>
+        <button class="btn btn-secondary" id="gradCheckBtn" style="font-size:0.75rem;">Grad Check</button>
+      </div>
+
+      <div class="control-group" style="gap:2px;">
+        <div class="control-label">Training Loss</div>
+        <div class="chart-container">
+          <canvas id="lossChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="control-group" style="gap:2px;">
+        <div class="control-label">Test Accuracy</div>
+        <div class="chart-container">
+          <canvas id="accuracyChart" class="chart-canvas"></canvas>
+        </div>
+      </div>
+      
+      <div class="action-row">
+        <button class="btn btn-secondary" id="slowMoBtn" style="width:100%; border-color:var(--accent); color:var(--accent); font-weight:600; padding:6px; box-shadow: 0 0 8px rgba(255, 183, 3, 0.15);">
+          Enter Slow Motion Mode
+        </button>
+      </div>
+    </div>
+
+    <!-- Bottom Panel: Math caption / Stepper -->
+    <div class="panel bottom-panel">
+      <!-- Stepper Controls (only visible in slow motion) -->
+      <div class="step-stepper" id="stepperControls">
+        <h3 id="stepTitle">Slow Motion Step 1/9: Input Layer</h3>
+        <div class="stepper-nav">
+          <button class="btn btn-secondary" id="stepPrevBtn" style="padding: 3px 8px; font-size: 0.75rem;">&larr; Prev</button>
+          <button class="btn btn-primary" id="stepNextBtn" style="padding: 3px 8px; font-size: 0.75rem;">Next &rarr;</button>
+          <button class="btn btn-secondary" id="exitSlowMoBtn" style="padding: 3px 8px; font-size: 0.75rem; background:rgba(255,0,0,0.1); color:#ff4f4f; border-color:rgba(255,0,0,0.2);">Exit</button>
+        </div>
+      </div>
+
+      <div class="math-info-display">
+        <!-- Interactive mathematical details -->
+        <div class="math-column" id="mathContainer">
+          <div class="math-formula-title">Math & Formulas (Hover a neuron to inspect)</div>
+          <div class="math-formula" id="mathFormula">
+            a<sub>j</sub><sup>(l)</sup> = &sigma;( z<sub>j</sub><sup>(l)</sup> ) = &sigma;( &sum; w<sub>jk</sub> a<sub>k</sub><sup>(l-1)</sup> + b<sub>j</sub> )
+          </div>
+          <div class="math-formula" id="mathValues" style="font-size:0.7rem;">
+            Hover over any neuron or line to see real-time matrix multiplication math.
+          </div>
+        </div>
+
+        <!-- 3Blue1Brown Caption Explanation -->
+        <div class="math-column">
+          <div class="math-formula-title" id="captionHeader">Concept & Insights</div>
+          <div class="caption-text" id="captionText">
+            In standard training mode, the network learns continuously. The lines represent weights (blue are positive, magenta/orange are negative). The brightness of lines indicates their magnitude. Hovering over Layer 1 neurons reveals their spatial filter representation, showing what shape features they seek!
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // --- SHAPE DATASET GENERATOR ---
+    class ShapeDataset {
+      static CLASSES = ['Square', 'Line', 'Cross', 'Circle'];
+
+      constructor() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = 28;
+        this.canvas.height = 28;
+        this.ctx = this.canvas.getContext('2d');
+      }
+
+      generateSample(classId, noiseLevel = 0.05, jitter = true) {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, 28, 28);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 28, 28);
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.save();
+        
+        // Setup drawing coordinates centered
+        if (jitter) {
+          const dx = (Math.random() - 0.5) * 4; // Shift [-2, 2] pixels
+          const dy = (Math.random() - 0.5) * 4;
+          ctx.translate(14 + dx, 14 + dy);
+          
+          const angle = (Math.random() - 0.5) * 0.3; // Rotate [-0.15, 0.15] radians
+          ctx.rotate(angle);
+          
+          const scale = 0.85 + Math.random() * 0.3; // Scale [0.85, 1.15]
+          ctx.scale(scale, scale);
+          
+          ctx.lineWidth = 2.0 + Math.random() * 1.5; // Stroke thickness [2, 3.5]
+        } else {
+          ctx.translate(14, 14);
+          ctx.lineWidth = 2.5;
+        }
+
+        // Render shapes relative to center (0,0)
+        if (classId === 0) {
+          // Square
+          const size = 11 + (Math.random() - 0.5) * 2;
+          ctx.strokeRect(-size/2, -size/2, size, size);
+        } else if (classId === 1) {
+          // Vertical Line
+          ctx.beginPath();
+          ctx.moveTo(0, -9);
+          ctx.lineTo(0, 9);
+          ctx.stroke();
+        } else if (classId === 2) {
+          // Cross
+          ctx.beginPath();
+          ctx.moveTo(0, -9);
+          ctx.lineTo(0, 9);
+          ctx.moveTo(-9, 0);
+          ctx.lineTo(9, 0);
+          ctx.stroke();
+        } else if (classId === 3) {
+          // Circle
+          const r = 6.5 + (Math.random() - 0.5) * 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // Convert canvas image buffer to 1D Float32 pixel array
+        const imgData = ctx.getImageData(0, 0, 28, 28);
+        const pixels = new Float32Array(784);
+        for (let i = 0; i < 784; i++) {
+          let val = imgData.data[i * 4] / 255;
+          if (noiseLevel > 0) {
+            val += (Math.random() - 0.5) * noiseLevel;
+          }
+          pixels[i] = Math.max(0, Math.min(1, val)); // Clamp [0, 1]
+        }
+
+        // Create target one-hot vector
+        const target = new Float32Array(4);
+        target[classId] = 1.0;
+
+        return { input: pixels, target, label: classId };
+      }
+
+      generateDataset(size, noiseLevel = 0.05) {
+        const dataset = [];
+        for (let i = 0; i < size; i++) {
+          const classId = Math.floor(Math.random() * 4);
+          dataset.push(this.generateSample(classId, noiseLevel, true));
+        }
+        return dataset;
+      }
+    }
+
+
+    // --- NEURAL NETWORK IMPLEMENTATION ---
+    class NeuralNetwork {
+      constructor(sizes) {
+        this.sizes = sizes;
+        this.numLayers = sizes.length;
+        this.weights = [];
+        this.biases = [];
+        
+        this.initWeights();
+      }
+
+      initWeights(activationType = 'leaky_relu') {
+        this.weights = [];
+        this.biases = [];
+        
+        for (let l = 1; l < this.numLayers; l++) {
+          const rows = this.sizes[l];
+          const cols = this.sizes[l - 1];
+          
+          // Xavier/He weight initialization depending on activation type
+          const layerWeights = [];
+          const stddev = activationType === 'leaky_relu' 
+            ? Math.sqrt(2.0 / cols) * 0.8   // He Initialization with a slightly tighter spread
+            : Math.sqrt(1.0 / cols) * 0.8;  // Xavier Initialization with a smoother start
+            
+          for (let r = 0; r < rows; r++) {
+            const row = [];
+            for (let c = 0; c < cols; c++) {
+              row.push(this.randomNormal(0, stddev));
+            }
+            layerWeights.push(row);
+          }
+          this.weights.push(layerWeights);
+          
+          // Initialize biases to zero or small positive values
+          const layerBiases = [];
+          for (let r = 0; r < rows; r++) {
+            layerBiases.push(activationType === 'leaky_relu' ? 0.02 : 0.0);
+          }
+          this.biases.push(layerBiases);
+        }
+        this.resetGradients();
+      }
+
+      randomNormal(mean = 0, stddev = 1) {
+        const u1 = 1.0 - Math.random();
+        const u2 = 1.0 - Math.random();
+        const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        return mean + stddev * randStdNormal;
+      }
+
+      resetGradients() {
+        this.d_weights = [];
+        this.d_biases = [];
+        for (let l = 1; l < this.numLayers; l++) {
+          const rows = this.sizes[l];
+          const cols = this.sizes[l - 1];
+          
+          const wGrad = [];
+          for (let r = 0; r < rows; r++) {
+            wGrad.push(new Float32Array(cols));
+          }
+          this.d_weights.push(wGrad);
+          this.d_biases.push(new Float32Array(rows));
+        }
+      }
+
+      // ACTIVATION FUNCTIONS & DERIVATIVES
+      sigmoid(z) {
+        return 1.0 / (1.0 + Math.exp(-z));
+      }
+
+      sigmoidDerivative(a) {
+        return a * (1.0 - a); // Expressed in terms of activation (a)
+      }
+
+      leakyRelu(z) {
+        return z > 0 ? z : 0.01 * z;
+      }
+
+      leakyReluDerivative(z) {
+        return z > 0 ? 1.0 : 0.01;
+      }
+
+      softmax(z) {
+        let max = -Infinity;
+        for (let i = 0; i < z.length; i++) {
+          if (z[i] > max) max = z[i];
+        }
+        const exp = new Float32Array(z.length);
+        let sum = 0.0;
+        for (let i = 0; i < z.length; i++) {
+          exp[i] = Math.exp(z[i] - max);
+          sum += exp[i];
+        }
+        for (let i = 0; i < z.length; i++) {
+          exp[i] /= sum;
+        }
+        return exp;
+      }
+
+      // FORWARD PROPAGATION
+      forward(input, preset = 'modern') {
+        const activations = [input];
+        const zs = [null];
+
+        for (let l = 1; l < this.numLayers; l++) {
+          const w = this.weights[l - 1];
+          const b = this.biases[l - 1];
+          const prevA = activations[l - 1];
+          
+          const z = new Float32Array(this.sizes[l]);
+          const a = new Float32Array(this.sizes[l]);
+          
+          for (let j = 0; j < this.sizes[l]; j++) {
+            let sum = b[j];
+            for (let k = 0; k < this.sizes[l - 1]; k++) {
+              sum += w[j][k] * prevA[k];
+            }
+            z[j] = sum;
+            
+            // Activation based on preset and layer depth
+            if (l === this.numLayers - 1) {
+              if (preset === 'modern') {
+                a[j] = z[j]; // Softmax activation handles output afterwards
+              } else {
+                a[j] = this.sigmoid(z[j]); // Classic output Sigmoid
+              }
+            } else {
+              if (preset === 'modern') {
+                a[j] = this.leakyRelu(z[j]); // Modern hidden Leaky ReLU
+              } else {
+                a[j] = this.sigmoid(z[j]); // Classic hidden Sigmoid
+              }
+            }
+          }
+          
+          // Apply Softmax across logits for output layer in modern preset
+          if (l === this.numLayers - 1 && preset === 'modern') {
+            const soft = this.softmax(z);
+            for (let j = 0; j < this.sizes[l]; j++) {
+              a[j] = soft[j];
+            }
+          }
+          
+          zs.push(z);
+          activations.push(a);
+        }
+        return { activations, zs };
+      }
+
+      // BACKPROPAGATION
+      backprop(input, target, preset = 'modern') {
+        const { activations, zs } = this.forward(input, preset);
+        const L = this.numLayers - 1;
+        
+        // Single sample gradient accumulator containers
+        const sample_d_weights = [];
+        const sample_d_biases = [];
+        for (let l = 1; l < this.numLayers; l++) {
+          sample_d_weights.push(Array.from({ length: this.sizes[l] }, () => new Float32Array(this.sizes[l - 1])));
+          sample_d_biases.push(new Float32Array(this.sizes[l]));
+        }
+        
+        const delta = Array.from({ length: this.numLayers }, () => null);
+        const outAct = activations[L];
+        const outDelta = new Float32Array(this.sizes[L]);
+        
+        // Output Error Delta
+        if (preset === 'modern') {
+          // Softmax + Cross Entropy: delta^(L) = a^(L) - y
+          for (let j = 0; j < this.sizes[L]; j++) {
+            outDelta[j] = outAct[j] - target[j];
+          }
+        } else {
+          // Sigmoid + MSE: delta^(L) = (a^(L) - y) * sigmoid'(z^(L))
+          for (let j = 0; j < this.sizes[L]; j++) {
+            const error = outAct[j] - target[j];
+            outDelta[j] = error * this.sigmoidDerivative(outAct[j]);
+          }
+        }
+        delta[L] = outDelta;
+        
+        // Backpropagate error delta through layers
+        for (let l = L - 1; l >= 1; l--) {
+          const nextDelta = delta[l + 1];
+          const wNext = this.weights[l];
+          const z = zs[l];
+          const a = activations[l];
+          const lDelta = new Float32Array(this.sizes[l]);
+          
+          for (let j = 0; j < this.sizes[l]; j++) {
+            let sum = 0.0;
+            for (let n = 0; n < this.sizes[l + 1]; n++) {
+              sum += wNext[n][j] * nextDelta[n];
+            }
+            
+            let actDeriv = 0.0;
+            if (preset === 'modern') {
+              actDeriv = this.leakyReluDerivative(z[j]);
+            } else {
+              actDeriv = this.sigmoidDerivative(a[j]);
+            }
+            lDelta[j] = sum * actDeriv;
+          }
+          delta[l] = lDelta;
+        }
+        
+        // Compute gradients for this sample
+        for (let l = 0; l < L; l++) {
+          const layerDelta = delta[l + 1];
+          const layerAct = activations[l];
+          
+          for (let j = 0; j < this.sizes[l + 1]; j++) {
+            sample_d_biases[l][j] = layerDelta[j];
+            for (let k = 0; k < this.sizes[l]; k++) {
+              sample_d_weights[l][j][k] = layerDelta[j] * layerAct[k];
+            }
+          }
+        }
+        
+        return { sample_d_weights, sample_d_biases, activations };
+      }
+
+      accumulateGradients(sampleGradients) {
+        const { sample_d_weights, sample_d_biases } = sampleGradients;
+        for (let l = 0; l < this.numLayers - 1; l++) {
+          for (let j = 0; j < this.sizes[l + 1]; j++) {
+            this.d_biases[l][j] += sample_d_biases[l][j];
+            for (let k = 0; k < this.sizes[l]; k++) {
+              this.d_weights[l][j][k] += sample_d_weights[l][j][k];
+            }
+          }
+        }
+      }
+
+      updateParameters(batchSize, learningRate) {
+        for (let l = 0; l < this.numLayers - 1; l++) {
+          for (let j = 0; j < this.sizes[l + 1]; j++) {
+            let gradB = this.d_biases[l][j] / batchSize;
+            if (gradB > 1.0) gradB = 1.0;
+            if (gradB < -1.0) gradB = -1.0;
+            this.biases[l][j] -= learningRate * gradB;
+            for (let k = 0; k < this.sizes[l]; k++) {
+              let gradW = this.d_weights[l][j][k] / batchSize;
+              if (gradW > 1.0) gradW = 1.0;
+              if (gradW < -1.0) gradW = -1.0;
+              this.weights[l][j][k] -= learningRate * gradW;
+            }
+          }
+        }
+        this.resetGradients();
+      }
+
+      computeLoss(output, target, preset = 'modern') {
+        if (preset === 'modern') {
+          // Cross-Entropy Loss
+          let sum = 0.0;
+          for (let i = 0; i < output.length; i++) {
+            sum -= target[i] * Math.log(output[i] + 1e-15);
+          }
+          return sum;
+        } else {
+          // Mean Squared Error (MSE): 1/2 * sum((a - y)^2)
+          let sum = 0.0;
+          for (let i = 0; i < output.length; i++) {
+            sum += 0.5 * (output[i] - target[i]) ** 2;
+          }
+          return sum;
+        }
+      }
+    }
+
+
+    // --- DRAWING CANVAS PAD ---
+    class DrawingPad {
+      constructor(canvasId, onDrawCallback) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.onDraw = onDrawCallback;
+        this.isDrawing = false;
+        
+        this.clear();
+        this.setupEvents();
+      }
+
+      clear() {
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.onDraw(new Float32Array(784));
+      }
+
+      setupEvents() {
+        const getMousePos = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+          };
+        };
+
+        const startDraw = (e) => {
+          e.preventDefault();
+          this.isDrawing = true;
+          this.ctx.beginPath();
+          const pos = getMousePos(e);
+          this.ctx.moveTo(pos.x, pos.y);
+        };
+
+        const draw = (e) => {
+          if (!this.isDrawing) return;
+          e.preventDefault();
+          
+          this.ctx.strokeStyle = '#f4f7ff';
+          this.ctx.lineWidth = 8;
+          this.ctx.lineCap = 'round';
+          this.ctx.lineJoin = 'round';
+          
+          this.ctx.shadowBlur = 2;
+          this.ctx.shadowColor = 'rgba(255, 255, 255, 0.12)';
+          
+          const pos = getMousePos(e);
+          this.ctx.lineTo(pos.x, pos.y);
+          this.ctx.stroke();
+          
+          this.processDrawing();
+        };
+
+        const stopDraw = () => {
+          if (this.isDrawing) {
+            this.isDrawing = false;
+            this.ctx.shadowBlur = 0;
+            this.processDrawing();
+          }
+        };
+
+        this.canvas.addEventListener('mousedown', startDraw);
+        this.canvas.addEventListener('mousemove', draw);
+        window.addEventListener('mouseup', stopDraw);
+
+        this.canvas.addEventListener('touchstart', startDraw);
+        this.canvas.addEventListener('touchmove', draw);
+        window.addEventListener('touchend', stopDraw);
+      }
+
+      processDrawing() {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = 28;
+        offscreen.height = 28;
+        const oCtx = offscreen.getContext('2d');
+        
+        oCtx.drawImage(this.canvas, 0, 0, 160, 160, 0, 0, 28, 28);
+        
+        const imgData = oCtx.getImageData(0, 0, 28, 28);
+        const pixels = new Float32Array(784);
+        for (let i = 0; i < 784; i++) {
+          pixels[i] = imgData.data[i * 4] / 255.0;
+        }
+        this.onDraw(pixels);
+      }
+
+      drawPreset(classId) {
+        const size = this.canvas.width;
+        const ctx = this.ctx;
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, size, size);
+
+        ctx.strokeStyle = '#f4f7ff';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        
+        ctx.shadowBlur = 1.5;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.12)';
+
+        ctx.save();
+        ctx.translate(size/2, size/2);
+
+        if (classId === 0) {
+          const s = size * 0.45;
+          ctx.strokeRect(-s/2, -s/2, s, s);
+        } else if (classId === 1) {
+          ctx.beginPath();
+          ctx.moveTo(0, -size * 0.35);
+          ctx.lineTo(0, size * 0.35);
+          ctx.stroke();
+        } else if (classId === 2) {
+          ctx.beginPath();
+          ctx.moveTo(0, -size * 0.35);
+          ctx.lineTo(0, size * 0.35);
+          ctx.moveTo(-size * 0.35, 0);
+          ctx.lineTo(size * 0.35, 0);
+          ctx.stroke();
+        } else if (classId === 3) {
+          ctx.beginPath();
+          ctx.arc(0, 0, size * 0.25, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+        ctx.shadowBlur = 0;
+        this.processDrawing();
+      }
+    }
+
+
+    // --- LINE CHART FOR METRICS ---
+    class ChartManager {
+      constructor(canvasId, color, maxVal = 1) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.color = color;
+        this.maxVal = maxVal;
+        this.data = [];
+      }
+
+      clear() {
+        this.data = [];
+        this.render();
+      }
+
+      addPoint(val) {
+        this.data.push(val);
+        if (this.data.length > 100) {
+          this.data.shift();
+        }
+        this.render();
+      }
+
+      render() {
+        const ctx = this.ctx;
+        const w = this.canvas.width = this.canvas.offsetWidth * window.devicePixelRatio;
+        const h = this.canvas.height = this.canvas.offsetHeight * window.devicePixelRatio;
+        ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        const cw = w / window.devicePixelRatio;
+        const ch = h / window.devicePixelRatio;
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          const y = (ch / 4) * i;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(cw, y);
+          ctx.stroke();
+        }
+
+        if (this.data.length < 2) return;
+
+        let currentMax = this.maxVal;
+        for (let i = 0; i < this.data.length; i++) {
+          if (this.data[i] > currentMax) currentMax = this.data[i] * 1.1;
+        }
+
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1.5;
+        
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = this.color.replace('1)', '0.5)');
+        
+        ctx.beginPath();
+        const xStep = cw / (this.data.length - 1);
+        for (let i = 0; i < this.data.length; i++) {
+          const x = i * xStep;
+          const y = ch - (this.data[i] / currentMax) * (ch - 10) - 5;
+          if (i === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.lineTo(cw, ch);
+        ctx.lineTo(0, ch);
+        ctx.closePath();
+        const grad = ctx.createLinearGradient(0, 0, 0, ch);
+        grad.addColorStop(0, this.color.replace('1)', '0.15)'));
+        grad.addColorStop(1, this.color.replace('1)', '0)'));
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = '9px var(--font-mono)';
+        const latest = this.data[this.data.length - 1];
+        ctx.fillText(latest.toFixed(4), cw - 45, 12);
+      }
+    }
+
+
+    // --- 3BLUE1BROWN NETWORK GRAPHIC VISUALIZER (SMOOTH & RESPONSIVE) ---
+    class NetworkVisualizer {
+      constructor(canvasId, network) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.network = network;
+        
+        this.hoveredNeuron = null;
+        this.hoveredWeight = null;
+        
+        // Interpolation storage buffers for activations and weights
+        this.activationsDraw = [];
+        this.weightsDraw = [];
+        
+        this.particles = [];
+        
+        // Initialize weight updates flash tracker
+        this.weightUpdates = [];
+        for (let l = 1; l < network.numLayers; l++) {
+          const rows = network.sizes[l];
+          const cols = network.sizes[l - 1];
+          const layerMod = [];
+          for (let r = 0; r < rows; r++) {
+            layerMod.push(new Float32Array(cols));
+          }
+          this.weightUpdates.push(layerMod);
+        }
+
+        // Initialize weights drawing buffer to match initial network weights
+        this.syncWeights();
+        this.initInteractive();
+        
+        window.addEventListener('resize', () => this.resize());
+        this.resize();
+      }
+
+      syncWeights() {
+        this.weightsDraw = [];
+        for (let l = 1; l < this.network.numLayers; l++) {
+          const rows = this.network.sizes[l];
+          const cols = this.network.sizes[l - 1];
+          const layerDraw = [];
+          for (let r = 0; r < rows; r++) {
+            layerDraw.push(new Float32Array(this.network.weights[l - 1][r]));
+          }
+          this.weightsDraw.push(layerDraw);
+        }
+      }
+
+      resize() {
+        const container = this.canvas.parentElement;
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+        
+        this.canvas.width = w * window.devicePixelRatio;
+        this.canvas.height = h * window.devicePixelRatio;
+        this.particles = []; // Prevent coordinate displacement
+      }
+
+      initInteractive() {
+        const getMouseCoords = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          return {
+            mx: e.clientX - rect.left,
+            my: e.clientY - rect.top
+          };
+        };
+
+        this.canvas.addEventListener('mousemove', (e) => {
+          const { mx, my } = getMouseCoords(e);
+          const cw = this.canvas.width / window.devicePixelRatio;
+          const ch = this.canvas.height / window.devicePixelRatio;
+          
+          this.hoveredNeuron = null;
+          this.hoveredWeight = null;
+
+          const layouts = this.getNeuronCoordinates(cw, ch);
+          
+          for (let l = 1; l < layouts.length; l++) {
+            for (let j = 0; j < layouts[l].length; j++) {
+              const n = layouts[l][j];
+              const dx = mx - n.x;
+              const dy = my - n.y;
+              if (dx*dx + dy*dy < n.r * n.r) {
+                this.hoveredNeuron = { layer: l, index: j };
+                this.triggerMathUpdate();
+                return;
+              }
+            }
+          }
+
+          const grid = layouts[0];
+          if (mx >= grid.x && mx <= grid.x + grid.w && my >= grid.y && my <= grid.y + grid.h) {
+            const cellSize = grid.w / 28;
+            const px = Math.floor((mx - grid.x) / cellSize);
+            const py = Math.floor((my - grid.y) / cellSize);
+            const idx = py * 28 + px;
+            if (idx >= 0 && idx < 784) {
+              this.hoveredNeuron = { layer: 0, index: idx };
+              this.triggerMathUpdate();
+              return;
+            }
+          }
+
+          this.triggerMathUpdate();
+        });
+      }
+
+      triggerMathUpdate() {
+        if (!this.hoveredNeuron) {
+          document.getElementById('mathFormula').innerHTML = `a<sub>j</sub><sup>(l)</sup> = &sigma;( z<sub>j</sub><sup>(l)</sup> ) = &sigma;( &sum; w<sub>jk</sub> a<sub>k</sub><sup>(l-1)</sup> + b<sub>j</sub> )`;
+          document.getElementById('mathValues').innerHTML = `Hover over any neuron or line to see real-time matrix multiplication math.`;
+          return;
+        }
+
+        const l = this.hoveredNeuron.layer;
+        const j = this.hoveredNeuron.index;
+        
+        if (l === 0) {
+          const pVal = currentInputActivations ? currentInputActivations[j] : 0;
+          document.getElementById('mathFormula').innerHTML = `a<sub>${j}</sub><sup>(0)</sup> = Input Pixel`;
+          document.getElementById('mathValues').innerHTML = `Pixel Index: ${j} (X: ${j%28}, Y: ${Math.floor(j/28)})<br>Activation: <span style="color:var(--primary); text-shadow:0 0 6px var(--primary-glow); font-weight:bold;">${pVal.toFixed(3)}</span>`;
+        } else {
+          const sizePrev = this.network.sizes[l - 1];
+          const w = this.network.weights[l - 1][j];
+          const b = this.network.biases[l - 1][j];
+          
+          let prevA = [];
+          if (this.network.zs && this.activationsDraw[l - 1]) {
+            prevA = this.activationsDraw[l - 1];
+          } else {
+            prevA = new Float32Array(sizePrev);
+          }
+
+          let zVal = b;
+          for (let k = 0; k < sizePrev; k++) {
+            zVal += w[k] * prevA[k];
+          }
+          const actVal = this.activationsDraw[l] ? this.activationsDraw[l][j] : 0;
+
+          let breakdown = '';
+          if (l === 1) {
+            const contrib = [];
+            for (let k = 0; k < 784; k++) {
+              const val = w[k] * prevA[k];
+              contrib.push({ k, val, w: w[k], a: prevA[k] });
+            }
+            contrib.sort((x, y) => Math.abs(y.val) - Math.abs(x.val));
+            
+            for (let i = 0; i < Math.min(2, contrib.length); i++) {
+              const c = contrib[i];
+              if (c.w * c.a === 0) continue;
+              breakdown += `(${c.w.toFixed(1)}&times;${c.a.toFixed(1)})+`;
+            }
+            breakdown += `...+(${b.toFixed(1)}) = <span style="color:var(--primary);">${zVal.toFixed(2)}</span>`;
+            document.getElementById('mathFormula').innerHTML = `z<sub>${j}</sub><sup>(1)</sup> = ${breakdown}`;
+          } else {
+            const contrib = [];
+            for (let k = 0; k < sizePrev; k++) {
+              contrib.push(`(${w[k].toFixed(1)}&times;${prevA[k].toFixed(1)})`);
+            }
+            breakdown = contrib.slice(0, 3).join('+') + '+...+(' + b.toFixed(1) + ') = ' + zVal.toFixed(2);
+            document.getElementById('mathFormula').innerHTML = `z<sub>${j}</sub><sup>(${l})</sup> = ${breakdown}`;
+          }
+          
+          const actLabel = (l === 3 && currentPreset === 'modern') ? 'Softmax' : (currentPreset === 'modern' ? 'Leaky ReLU' : 'Sigmoid');
+          document.getElementById('mathValues').innerHTML = `Weighted input (z): ${zVal.toFixed(3)} | Activation (a) = ${actLabel}(z) = <span style="color:var(--accent); text-shadow:0 0 6px var(--accent-glow); font-weight:bold;">${actVal.toFixed(3)}</span>`;
+        }
+      }
+
+      getNeuronCoordinates(cw, ch) {
+        const layouts = [];
+        const gSize = Math.max(100, Math.min(130, ch * 0.35));
+        layouts.push({ grid: true, x: cw * 0.05, y: ch / 2 - gSize / 2, w: gSize, h: gSize });
+
+        const l1 = [];
+        const spacing1 = Math.min(18, (ch - 40) / 15);
+        const startY1 = ch / 2 - (15 * spacing1) / 2;
+        const r1 = Math.max(5, Math.min(7, ch * 0.015));
+        for (let i = 0; i < 16; i++) {
+          l1.push({ x: cw * 0.38, y: startY1 + i * spacing1, r: r1 });
+        }
+        layouts.push(l1);
+
+        const l2 = [];
+        for (let i = 0; i < 16; i++) {
+          l2.push({ x: cw * 0.65, y: startY1 + i * spacing1, r: r1 });
+        }
+        layouts.push(l2);
+
+        const l3 = [];
+        const spacing3 = Math.min(50, ch * 0.12);
+        const startY3 = ch / 2 - (3 * spacing3) / 2;
+        const r3 = Math.max(11, Math.min(15, ch * 0.035));
+        for (let i = 0; i < 4; i++) {
+          l3.push({ x: cw * 0.9, y: startY3 + i * spacing3, r: r3 });
+        }
+        layouts.push(l3);
+
+        return layouts;
+      }
+
+      flashUpdatedWeights(sampleGradients, learningRate) {
+        const { sample_d_weights } = sampleGradients;
+        const L = this.network.numLayers - 1;
+        for (let l = 0; l < L; l++) {
+          for (let j = 0; j < this.network.sizes[l + 1]; j++) {
+            for (let k = 0; k < this.network.sizes[l]; k++) {
+              const deltaW = Math.abs(sample_d_weights[l][j][k] * learningRate);
+              this.weightUpdates[l][j][k] = Math.min(1.0, this.weightUpdates[l][j][k] + deltaW * 14.0);
+            }
+          }
+        }
+      }
+
+      spawnPulses(direction = 'forward') {
+        const cw = this.canvas.width / window.devicePixelRatio;
+        const ch = this.canvas.height / window.devicePixelRatio;
+        const layouts = this.getNeuronCoordinates(cw, ch);
+        
+        if (direction === 'forward') {
+          const activeInputs = [];
+          for (let k = 0; k < 784; k++) {
+            if (currentInputActivations[k] > 0.05) activeInputs.push(k);
+          }
+          
+          const grid = layouts[0];
+          const cellSize = grid.w / 28;
+          const subsetSize = Math.min(25, activeInputs.length); // Spawns fewer, cleaner particles
+          
+          for (let i = 0; i < subsetSize; i++) {
+            const idx = activeInputs[Math.floor(Math.random() * activeInputs.length)];
+            const r = Math.floor(idx / 28);
+            const c = idx % 28;
+            const startX = grid.x + c * cellSize + cellSize / 2;
+            const startY = grid.y + r * cellSize + cellSize / 2;
+            
+            for (let j = 0; j < 16; j++) {
+              const w = this.network.weights[0][j][idx];
+              if (Math.abs(w) > 0.2) {
+                this.particles.push({
+                  x: startX, y: startY,
+                  sx: startX, sy: startY,
+                  ex: layouts[1][j].x, ey: layouts[1][j].y,
+                  prog: 0,
+                  speed: 0.04 + Math.random() * 0.02,
+                  color: w > 0 ? 'rgba(0, 229, 255, 0.95)' : 'rgba(255, 85, 0, 0.95)',
+                  size: 1.5,
+                  nextCascade: () => this.cascadeToLayer(2, j, cw, ch)
+                });
+              }
+            }
+          }
+        } else {
+          for (let j = 0; j < 4; j++) {
+            for (let k = 0; k < 16; k++) {
+              const w = this.network.weights[2][j][k];
+              this.particles.push({
+                x: layouts[3][j].x, y: layouts[3][j].y,
+                sx: layouts[3][j].x, sy: layouts[3][j].y,
+                ex: layouts[2][k].x, ey: layouts[2][k].y,
+                prog: 0,
+                speed: 0.04 + Math.random() * 0.02,
+                color: 'rgba(255, 183, 3, 0.95)',
+                size: 2,
+                nextCascade: () => this.cascadeBackToLayer(1, k, cw, ch)
+              });
+            }
+          }
+        }
+      }
+
+      cascadeToLayer(targetLayer, fromNeuronIndex, cw, ch) {
+        const layouts = this.getNeuronCoordinates(cw, ch);
+        const sizeNext = this.network.sizes[targetLayer];
+        
+        for (let j = 0; j < sizeNext; j++) {
+          const w = this.network.weights[targetLayer - 1][j][fromNeuronIndex];
+          if (Math.abs(w) > 0.12) {
+            this.particles.push({
+              x: layouts[targetLayer - 1][fromNeuronIndex].x,
+              y: layouts[targetLayer - 1][fromNeuronIndex].y,
+              sx: layouts[targetLayer - 1][fromNeuronIndex].x,
+              sy: layouts[targetLayer - 1][fromNeuronIndex].y,
+              ex: layouts[targetLayer][j].x,
+              ey: layouts[targetLayer][j].y,
+              prog: 0,
+              speed: 0.05 + Math.random() * 0.02,
+              color: w > 0 ? 'rgba(0, 229, 255, 0.95)' : 'rgba(255, 85, 0, 0.95)',
+              size: 1.5,
+              nextCascade: targetLayer === 2 ? () => this.cascadeToLayer(3, j, cw, ch) : null
+            });
+          }
+        }
+      }
+
+      cascadeBackToLayer(targetLayer, fromNeuronIndex, cw, ch) {
+        const layouts = this.getNeuronCoordinates(cw, ch);
+        const sizePrev = this.network.sizes[targetLayer - 1];
+        
+        for (let k = 0; k < sizePrev; k++) {
+          const w = this.network.weights[targetLayer][fromNeuronIndex][k];
+          this.particles.push({
+            x: layouts[targetLayer + 1][fromNeuronIndex].x,
+            y: layouts[targetLayer + 1][fromNeuronIndex].y,
+            sx: layouts[targetLayer + 1][fromNeuronIndex].x,
+            sy: layouts[targetLayer + 1][fromNeuronIndex].y,
+            ex: layouts[targetLayer][k].x,
+            ey: layouts[targetLayer][k].y,
+            prog: 0,
+            speed: 0.05 + Math.random() * 0.02,
+            color: 'rgba(255, 183, 3, 0.95)',
+            size: 2,
+            nextCascade: targetLayer === 1 ? () => this.cascadeBackToLayer(0, k, cw, ch) : null
+          });
+        }
+      }
+
+      render(activationsReal) {
+        const ctx = this.ctx;
+        const cw = this.canvas.width / window.devicePixelRatio;
+        const ch = this.canvas.height / window.devicePixelRatio;
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        // 1. Interpolate Activations Draw Buffer (0.8 decay = smooth transitions)
+        if (this.activationsDraw.length === 0 && activationsReal) {
+          this.activationsDraw = activationsReal.map(act => new Float32Array(act));
+        } else if (activationsReal) {
+          for (let l = 0; l < this.network.numLayers; l++) {
+            for (let j = 0; j < this.network.sizes[l]; j++) {
+              this.activationsDraw[l][j] = this.activationsDraw[l][j] * 0.82 + activationsReal[l][j] * 0.18;
+            }
+          }
+        }
+
+        // 2. Interpolate Connection Weights Draw Buffer (0.85 decay = buttery line opacity updates)
+        for (let l = 0; l < this.network.numLayers - 1; l++) {
+          const wReal = this.network.weights[l];
+          const wDraw = this.weightsDraw[l];
+          for (let j = 0; j < this.network.sizes[l + 1]; j++) {
+            for (let k = 0; k < this.network.sizes[l]; k++) {
+              wDraw[j][k] = wDraw[j][k] * 0.85 + wReal[j][k] * 0.15;
+            }
+          }
+        }
+
+        const layouts = this.getNeuronCoordinates(cw, ch);
+
+        // DRAW INPUT PIXEL GRID
+        const grid = layouts[0];
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(grid.x - 1, grid.y - 1, grid.w + 2, grid.h + 2);
+        
+        const cellSize = grid.w / 28;
+        for (let r = 0; r < 28; r++) {
+          for (let c = 0; c < 28; c++) {
+            const idx = r * 28 + c;
+            const pVal = currentInputActivations[idx];
+            if (pVal > 0.0) {
+              ctx.fillStyle = `rgba(0, 229, 255, ${Math.max(0.12, pVal * 0.7)})`;
+              ctx.fillRect(grid.x + c * cellSize, grid.y + r * cellSize, cellSize + 0.3, cellSize + 0.3);
+            }
+          }
+        }
+
+        // Draw weights heatmap thumbnail
+        if (this.hoveredNeuron && this.hoveredNeuron.layer === 1) {
+          const hoverIdx = this.hoveredNeuron.index;
+          const weights1 = this.network.weights[0][hoverIdx];
+          
+          ctx.save();
+          const mapX = grid.x;
+          const mapY = grid.y - grid.h - 15 > 10 ? grid.y - grid.h - 15 : 20;
+          const boxSize = grid.w;
+          
+          ctx.fillStyle = 'rgba(5, 7, 10, 0.85)';
+          ctx.fillRect(mapX - 4, mapY - 14, boxSize + 8, boxSize + 18);
+          ctx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
+          ctx.strokeRect(mapX - 4, mapY - 14, boxSize + 8, boxSize + 18);
+          
+          ctx.fillStyle = '#fff';
+          ctx.font = '9px var(--font-sans)';
+          ctx.fillText(`Weights map: Neuron ${hoverIdx}`, mapX, mapY - 4);
+
+          for (let r = 0; r < 28; r++) {
+            for (let c = 0; c < 28; c++) {
+              const wVal = weights1[r * 28 + c];
+              const absW = Math.min(1.0, Math.abs(wVal) * 1.6);
+              if (wVal > 0) {
+                ctx.fillStyle = `rgba(0, 229, 255, ${absW * 0.85})`;
+              } else {
+                ctx.fillStyle = `rgba(255, 85, 0, ${absW * 0.85})`;
+              }
+              ctx.fillRect(mapX + c * cellSize, mapY + r * cellSize, cellSize + 0.3, cellSize + 0.3);
+            }
+          }
+          ctx.restore();
+        }
+
+        // DRAW WEIGHT CONNECTIONS (Using weightsDraw for ultimate smoothness)
+        // Hidden 1 -> Hidden 2
+        for (let j = 0; j < 16; j++) {
+          for (let k = 0; k < 16; k++) {
+            const n1 = layouts[1][k];
+            const n2 = layouts[2][j];
+            const wVal = this.weightsDraw[1 - 1][j][k]; // Layer 1 -> 2
+            const flash = this.weightUpdates[1][j][k];
+            
+            let opacity = Math.min(0.82, Math.abs(wVal) * 0.5 + 0.16);
+            let width = 0.7 + Math.abs(wVal) * 1.2;
+            
+            ctx.save();
+            if (this.hoveredNeuron) {
+              if (this.hoveredNeuron.layer === 2 && this.hoveredNeuron.index === j) {
+                opacity = Math.min(1.0, Math.abs(wVal) * 0.95 + 0.12);
+                width *= 1.8;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = wVal > 0 ? 'var(--primary)' : 'var(--secondary)';
+              } else if (this.hoveredNeuron.layer === 1 && this.hoveredNeuron.index === k) {
+                opacity = Math.min(1.0, Math.abs(wVal) * 0.95 + 0.12);
+                width *= 1.8;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = wVal > 0 ? 'var(--primary)' : 'var(--secondary)';
+              } else {
+                opacity *= 0.12;
+              }
+            }
+
+            ctx.strokeStyle = wVal > 0 ? `rgba(0, 229, 255, ${opacity})` : `rgba(255, 85, 0, ${opacity})`;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.stroke();
+            ctx.restore();
+
+            // Render flashes (Gradients Updates)
+            if (flash > 0.01) {
+              ctx.save();
+              ctx.strokeStyle = `rgba(255, 255, 255, ${flash * 0.85})`;
+              ctx.lineWidth = width * (1.0 + flash);
+              ctx.shadowBlur = 5;
+              ctx.shadowColor = '#fff';
+              ctx.beginPath();
+              ctx.moveTo(n1.x, n1.y);
+              ctx.lineTo(n2.x, n2.y);
+              ctx.stroke();
+              ctx.restore();
+              this.weightUpdates[1][j][k] *= 0.88;
+            }
+          }
+        }
+
+        // Hidden 2 -> Output
+        for (let j = 0; j < 4; j++) {
+          for (let k = 0; k < 16; k++) {
+            const n1 = layouts[2][k];
+            const n2 = layouts[3][j];
+            const wVal = this.weightsDraw[2 - 1][j][k]; // Layer 2 -> 3
+            const flash = this.weightUpdates[2][j][k];
+            
+            let opacity = Math.min(0.9, Math.abs(wVal) * 0.55 + 0.16);
+            let width = 0.75 + Math.abs(wVal) * 1.35;
+            
+            ctx.save();
+            if (this.hoveredNeuron) {
+              if (this.hoveredNeuron.layer === 3 && this.hoveredNeuron.index === j) {
+                opacity = Math.min(1.0, Math.abs(wVal) * 0.95 + 0.12);
+                width *= 1.9;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = wVal > 0 ? 'var(--primary)' : 'var(--secondary)';
+              } else if (this.hoveredNeuron.layer === 2 && this.hoveredNeuron.index === k) {
+                opacity = Math.min(1.0, Math.abs(wVal) * 0.95 + 0.12);
+                width *= 1.9;
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = wVal > 0 ? 'var(--primary)' : 'var(--secondary)';
+              } else {
+                opacity *= 0.12;
+              }
+            }
+
+            ctx.strokeStyle = wVal > 0 ? `rgba(0, 229, 255, ${opacity})` : `rgba(255, 85, 0, ${opacity})`;
+            ctx.lineWidth = width;
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.stroke();
+            ctx.restore();
+
+            if (flash > 0.01) {
+              ctx.save();
+              ctx.strokeStyle = `rgba(255, 255, 255, ${flash * 0.85})`;
+              ctx.lineWidth = width * (1.0 + flash);
+              ctx.shadowBlur = 5;
+              ctx.shadowColor = '#fff';
+              ctx.beginPath();
+              ctx.moveTo(n1.x, n1.y);
+              ctx.lineTo(n2.x, n2.y);
+              ctx.stroke();
+              ctx.restore();
+              this.weightUpdates[2][j][k] *= 0.88;
+            }
+          }
+        }
+
+        // Input Grid -> Hidden 1
+        for (let j = 0; j < 16; j++) {
+          const weightsL1 = this.weightsDraw[0][j]; // Layer 0 -> 1
+          
+          if (this.hoveredNeuron && this.hoveredNeuron.layer === 1 && this.hoveredNeuron.index === j) {
+            for (let k = 0; k < 784; k++) {
+              const pVal = currentInputActivations[k];
+              if (pVal > 0.05) {
+                const r = Math.floor(k / 28);
+                const c = k % 28;
+                const px = grid.x + c * cellSize + cellSize / 2;
+                const py = grid.y + r * cellSize + cellSize / 2;
+                const wVal = weightsL1[k];
+                const opacity = Math.min(0.95, Math.abs(wVal) * 0.9 * (pVal + 0.15));
+                
+                ctx.strokeStyle = wVal > 0 ? `rgba(0, 229, 255, ${opacity})` : `rgba(255, 85, 0, ${opacity})`;
+                ctx.lineWidth = 0.7 + Math.abs(wVal) * 0.9;
+                ctx.beginPath();
+                ctx.moveTo(px, py);
+                ctx.lineTo(layouts[1][j].x, layouts[1][j].y);
+                ctx.stroke();
+              }
+            }
+          } else if (!this.hoveredNeuron) {
+            const activeWeights = [];
+            for (let k = 0; k < 784; k++) {
+              const pVal = currentInputActivations[k];
+              if (pVal > 0.05) {
+                activeWeights.push({ k, mag: Math.abs(weightsL1[k]) * pVal, w: weightsL1[k] });
+              }
+            }
+            activeWeights.sort((a, b) => b.mag - a.mag);
+            
+            for (let i = 0; i < Math.min(2, activeWeights.length); i++) {
+              const item = activeWeights[i];
+              const r = Math.floor(item.k / 28);
+              const c = item.k % 28;
+              const px = grid.x + c * cellSize + cellSize / 2;
+              const py = grid.y + r * cellSize + cellSize / 2;
+              const opacity = Math.min(0.5, item.mag * 0.34);
+              
+              ctx.strokeStyle = item.w > 0 ? `rgba(0, 229, 255, ${opacity})` : `rgba(255, 85, 0, ${opacity})`;
+              ctx.lineWidth = 0.6 + Math.abs(item.w) * 0.5;
+              ctx.beginPath();
+              ctx.moveTo(px, py);
+              ctx.lineTo(layouts[1][j].x, layouts[1][j].y);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // DRAW ANIMATED FLOW PARTICLES
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+          const p = this.particles[i];
+          p.prog += p.speed;
+          if (p.prog >= 1.0) {
+            if (p.nextCascade) p.nextCascade();
+            this.particles.splice(i, 1);
+            continue;
+          }
+          
+          p.x = p.sx * (1.0 - p.prog) + p.ex * p.prog;
+          p.y = p.sy * (1.0 - p.prog) + p.ey * p.prog;
+
+          ctx.save();
+          ctx.fillStyle = p.color;
+          ctx.shadowBlur = p.size * 3.5;
+          ctx.shadowColor = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // DRAW NEURONS
+        for (let l = 1; l < layouts.length; l++) {
+          const layerActs = this.activationsDraw[l] || new Float32Array(this.network.sizes[l]);
+          for (let j = 0; j < layouts[l].length; j++) {
+            const n = layouts[l][j];
+            const act = layerActs[j];
+
+            ctx.save();
+            ctx.fillStyle = '#0f1118';
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (act > 0.03) {
+              const glowStrength = Math.max(0.28, act * 0.95);
+              ctx.shadowBlur = n.r * 2.2 * glowStrength;
+              ctx.shadowColor = l === 3 ? `rgba(255, 183, 3, ${glowStrength * 0.8})` : `rgba(0, 229, 255, ${glowStrength * 0.7})`;
+              
+              const glowGrad = ctx.createRadialGradient(n.x, n.y, n.r * 0.1, n.x, n.y, n.r * 1.8);
+              glowGrad.addColorStop(0, l === 3 ? `rgba(255, 183, 3, ${act * 0.75})` : `rgba(0, 229, 255, ${act * 0.55})`);
+              glowGrad.addColorStop(1, l === 3 ? 'rgba(255, 183, 3, 0)' : 'rgba(0, 229, 255, 0)');
+              ctx.fillStyle = glowGrad;
+              ctx.beginPath();
+              ctx.arc(n.x, n.y, n.r * 1.8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
+            const coreColor = l === 3 ? 'rgba(255, 183, 3' : 'rgba(0, 229, 255';
+            ctx.fillStyle = `${coreColor}, ${act * 0.9 + (act > 0 ? 0.1 : 0)})`;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r - 1.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            let outlineColor = 'rgba(255, 255, 255, 0.15)';
+            let outlineWidth = 1;
+            
+            if (this.hoveredNeuron && this.hoveredNeuron.layer === l && this.hoveredNeuron.index === j) {
+              outlineColor = 'var(--primary)';
+              outlineWidth = 1.5;
+            }
+            
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = outlineWidth;
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+            ctx.stroke();
+
+            if (l === 3) {
+              ctx.fillStyle = act > 0.65 ? '#000000' : '#ffffff';
+              ctx.font = '9px var(--font-sans)';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fontWeight = 'bold';
+              const symbol = ShapeDataset.CLASSES[j][0];
+              ctx.fillText(symbol, n.x, n.y);
+            }
+          }
+        }
+      }
+    }
+
+
+    // --- APPLICATION STATE & CONTROLLER ---
+    const sizes = [784, 16, 16, 4];
+    const nn = new NeuralNetwork(sizes);
+    const datasetGen = new ShapeDataset();
+    
+    let trainDataset = [];
+    let testDataset = [];
+    let currentInputActivations = new Float32Array(784);
+    let currentPreset = 'modern';
+    
+    let isTraining = false;
+    let epochsCount = 0;
+    let batchesCount = 0;
+    let animationSpeed = 3;
+    let pulseThrottleCounter = 0; // Throttle pulses during training to look clean
+    
+    const lrSlider = document.getElementById('lrSlider');
+    const batchSlider = document.getElementById('batchSlider');
+    const speedSlider = document.getElementById('speedSlider');
+    const noiseSlider = document.getElementById('noiseSlider');
+    const presetSelect = document.getElementById('presetSelect');
+    
+    const lrVal = document.getElementById('lrVal');
+    const batchVal = document.getElementById('batchVal');
+    const speedVal = document.getElementById('speedVal');
+    const noiseVal = document.getElementById('noiseVal');
+    const epochBadge = document.getElementById('epochBadge');
+    const lossBadge = document.getElementById('lossBadge');
+    const accuracyBadge = document.getElementById('accuracyBadge');
+    const configBadge = document.getElementById('configBadge');
+    
+    const slowMoBtn = document.getElementById('slowMoBtn');
+    const stepperControls = document.getElementById('stepperControls');
+    const stepTitle = document.getElementById('stepTitle');
+    const stepPrevBtn = document.getElementById('stepPrevBtn');
+    const stepNextBtn = document.getElementById('stepNextBtn');
+    const exitSlowMoBtn = document.getElementById('exitSlowMoBtn');
+    const captionHeader = document.getElementById('captionHeader');
+    const captionText = document.getElementById('captionText');
+
+    let pad = null;
+    let visualizer = null;
+    let lossChart = null;
+    let accuracyChart = null;
+
+    let isSlowMoMode = false;
+    let slowMoStep = 0;
+    let slowMoSample = null;
+
+    const SLOW_MO_STEPS = [
+      {
+        title: "Step 1: Input Activations",
+        header: "Spatial Inputs",
+        caption: "The 28x28 pixel grid acts as the input layer. High activations represent white stroke pixels (value 1.0) and low activations represent black backgrounds (value 0.0). These 784 inputs feed directly into the first hidden layer.",
+        action: (vis) => {
+          vis.render(vis.network.forward(currentInputActivations, currentPreset).activations);
+          vis.spawnPulses('forward');
+        }
+      },
+      {
+        title: "Step 2: Forward Pass (Hidden Layer 1)",
+        header: "Feature Detection",
+        caption: "Pixel values are multiplied by their connecting weights and summed with the bias: z = W · a + b. We then pass this sum through the activation function (Leaky ReLU or Sigmoid) to determine the hidden activations. Notice neurons lighting up as pulses reach them!",
+        action: (vis) => {
+          const res = vis.network.forward(currentInputActivations, currentPreset);
+          vis.render(res.activations);
+          const cw = vis.canvas.width / window.devicePixelRatio;
+          const ch = vis.canvas.height / window.devicePixelRatio;
+          vis.cascadeToLayer(2, 0, cw, ch);
+        }
+      },
+      {
+        title: "Step 3: Forward Pass (Hidden Layer 2)",
+        header: "Aggregating Features",
+        caption: "The network feeds Layer 1 activations into Layer 2. Individual sub-features (like straight segments or curves) combine to model more complex shapes. The mathematical formulation: a2 = f( W2 · a1 + b2 ).",
+        action: (vis) => {
+          const res = vis.network.forward(currentInputActivations, currentPreset);
+          vis.render(res.activations);
+          const cw = vis.canvas.width / window.devicePixelRatio;
+          const ch = vis.canvas.height / window.devicePixelRatio;
+          vis.cascadeToLayer(3, 0, cw, ch);
+        }
+      },
+      {
+        title: "Step 4: Forward Pass (Output Layer)",
+        header: "Shape Probabilities",
+        caption: "The signals reach the 4 output neurons (Square, Line, Cross, Circle). Modern Softmax or classic Sigmoid maps these outputs to relative confidence levels. The class with the highest probability represents the prediction!",
+        action: (vis) => {
+          const res = vis.network.forward(currentInputActivations, currentPreset);
+          vis.render(res.activations);
+          updateOutputBars(res.activations[3]);
+        }
+      },
+      {
+        title: "Step 5: Compute Error & Loss",
+        header: "Cost Function Evaluation",
+        caption: "We compare output activations with the target labels (e.g. [1, 0, 0, 0] for Square). The cost function (Cross-Entropy or Mean Squared Error) measures the squared differences. Minimizing this error is the core task of learning.",
+        action: (vis) => {
+          const res = vis.network.forward(currentInputActivations, currentPreset);
+          vis.render(res.activations);
+        }
+      },
+      {
+        title: "Step 6: Backprop (Output Gradients)",
+        header: "Tracking Responsibility",
+        caption: "Gradients start flowing backward! We compute how sensitive the output logits are to the cost. The difference (a - y) tells us how much to push each output neuron to align with the correct class. Red pulses signal error propagation.",
+        action: (vis) => {
+          vis.spawnPulses('backward');
+        }
+      },
+      {
+        title: "Step 7: Backprop (Hidden Layer 2 Gradients)",
+        header: "Error Distribution",
+        caption: "We backpropagate the error delta through the weights to Hidden Layer 2. The error delta at each neuron is calculated by summing the downstream errors scaled by the connecting weights: delta2 = (W3^T · delta3) * f'(z2).",
+        action: (vis) => {
+          const cw = vis.canvas.width / window.devicePixelRatio;
+          const ch = vis.canvas.height / window.devicePixelRatio;
+          vis.cascadeBackToLayer(1, 0, cw, ch);
+        }
+      },
+      {
+        title: "Step 8: Backprop (Hidden Layer 1 Gradients)",
+        header: "Input Sensitivity",
+        caption: "We propagate the error back to Hidden Layer 1, determining how much every single weight from the 784 pixels needs to adjust to correct the mistake. The chain rule of calculus links all these derivatives together.",
+        action: (vis) => {
+          const cw = vis.canvas.width / window.devicePixelRatio;
+          const ch = vis.canvas.height / window.devicePixelRatio;
+          vis.cascadeBackToLayer(0, 0, cw, ch);
+        }
+      },
+      {
+        title: "Step 9: Weight Updates (Gradient Descent)",
+        header: "Applying the Adjustment",
+        caption: "With all weight gradients calculated, we adjust them in the negative gradient direction: W = W - lr * dW. Watch the connection lines flash! Blue lines represent positive adjustments, magenta show negative. The network has learned!",
+        action: (vis) => {
+          const sample = slowMoSample || trainDataset[0];
+          const grads = nn.backprop(sample.input, sample.target, currentPreset);
+          nn.resetGradients();
+          nn.accumulateGradients(grads);
+          const lr = parseFloat(lrSlider.value);
+          nn.updateParameters(1, lr);
+          visualizer.flashUpdatedWeights(grads, lr);
+          vis.render(grads.activations);
+        }
+      }
+    ];
+
+    function setupApp() {
+      // Setup pad ONLY to update input array. No heavy redraws inside input handler!
+      pad = new DrawingPad('drawingCanvas', (pixels) => {
+        currentInputActivations = pixels;
+      });
+
+      lossChart = new ChartManager('lossChart', 'rgba(255, 112, 150, 1)', 0.5);
+      accuracyChart = new ChartManager('accuracyChart', 'rgba(0, 229, 255, 1)', 100);
+      
+      regenerateDataset();
+      visualizer = new NetworkVisualizer('networkCanvas', nn);
+      
+      const initRes = nn.forward(currentInputActivations, currentPreset);
+      visualizer.render(initRes.activations);
+
+      setupUIEvents();
+      requestAnimationFrame(tick);
+    }
+
+    function regenerateDataset() {
+      const noise = parseInt(noiseSlider.value) / 100.0;
+      trainDataset = datasetGen.generateDataset(600, noise);
+      testDataset = datasetGen.generateDataset(150, noise);
+    }
+
+    function setupUIEvents() {
+      lrSlider.addEventListener('input', () => lrVal.textContent = lrSlider.value);
+      batchSlider.addEventListener('input', () => batchVal.textContent = batchSlider.value);
+      speedSlider.addEventListener('input', () => speedVal.textContent = speedSlider.value + 'x');
+      
+      noiseSlider.addEventListener('input', () => {
+        noiseVal.textContent = noiseSlider.value + '%';
+        regenerateDataset();
+      });
+
+      presetSelect.addEventListener('change', () => {
+        currentPreset = presetSelect.value;
+        configBadge.textContent = currentPreset === 'modern' ? 'Modern' : 'Classic';
+        nn.initWeights(currentPreset === 'modern' ? 'leaky_relu' : 'sigmoid');
+        if (visualizer) visualizer.syncWeights();
+        resetTraining();
+      });
+
+      document.getElementById('clearBtn').addEventListener('click', () => {
+        pad.clear();
+      });
+
+      const trainBtn = document.getElementById('trainBtn');
+      trainBtn.addEventListener('click', () => {
+        if (isSlowMoMode) exitSlowMotion();
+        isTraining = !isTraining;
+        trainBtn.textContent = isTraining ? 'Pause Training' : 'Train (Play)';
+        trainBtn.className = isTraining ? 'btn btn-secondary' : 'btn btn-primary';
+      });
+
+      document.getElementById('stepBatchBtn').addEventListener('click', () => {
+        if (isSlowMoMode) exitSlowMotion();
+        runStepBatch();
+      });
+
+      document.getElementById('resetBtn').addEventListener('click', () => {
+        resetTraining();
+      });
+
+      document.getElementById('gradCheckBtn').addEventListener('click', () => {
+        runNumericalGradientCheck();
+      });
+
+      slowMoBtn.addEventListener('click', () => {
+        if (!isSlowMoMode) {
+          enterSlowMotion();
+        } else {
+          exitSlowMotion();
+        }
+      });
+
+      exitSlowMoBtn.addEventListener('click', exitSlowMotion);
+
+      stepNextBtn.addEventListener('click', () => {
+        if (slowMoStep < SLOW_MO_STEPS.length - 1) {
+          slowMoStep++;
+          updateSlowMoStep();
+        } else {
+          slowMoStep = 0;
+          updateSlowMoStep();
+        }
+      });
+
+      stepPrevBtn.addEventListener('click', () => {
+        if (slowMoStep > 0) {
+          slowMoStep--;
+          updateSlowMoStep();
+        }
+      });
+    }
+
+    function drawPresetShape(classId) {
+      if (isSlowMoMode) exitSlowMotion();
+      pad.drawPreset(classId);
+    }
+
+    function resetTraining() {
+      isTraining = false;
+      epochsCount = 0;
+      batchesCount = 0;
+      document.getElementById('trainBtn').textContent = 'Train (Play)';
+      document.getElementById('trainBtn').className = 'btn btn-primary';
+      
+      nn.initWeights(currentPreset === 'modern' ? 'leaky_relu' : 'sigmoid');
+      if (visualizer) visualizer.syncWeights();
+      
+      lossChart.clear();
+      accuracyChart.clear();
+      
+      epochBadge.textContent = '0';
+      lossBadge.textContent = '0.0000';
+      accuracyBadge.textContent = '0.0%';
+      
+      const res = nn.forward(currentInputActivations, currentPreset);
+      updateOutputBars(res.activations[3]);
+      visualizer.render(res.activations);
+    }
+
+    function updateOutputBars(output) {
+      let maxIdx = 0;
+      for (let j = 0; j < 4; j++) {
+        if (output[j] > output[maxIdx]) maxIdx = j;
+      }
+
+      for (let j = 0; j < 4; j++) {
+        const fill = document.getElementById(`outBar-${j}`);
+        const val = document.getElementById(`outVal-${j}`);
+        const row = document.getElementById(`outRow-${j}`);
+        const percent = Math.max(0, Math.min(100, Math.round(output[j] * 100)));
+        
+        fill.style.width = `${percent}%`;
+        val.textContent = `${percent}%`;
+
+        if (j === maxIdx && output[j] > 0.15) {
+          row.classList.add('predicted');
+        } else {
+          row.classList.remove('predicted');
+        }
+      }
+    }
+
+    function runStepBatch() {
+      if (trainDataset.length === 0) return;
+      
+      const batchSize = parseInt(batchSlider.value);
+      const lr = parseFloat(lrSlider.value);
+      
+      const batch = [];
+      for (let i = 0; i < batchSize; i++) {
+        const randIdx = Math.floor(Math.random() * trainDataset.length);
+        batch.push(trainDataset[randIdx]);
+      }
+
+      nn.resetGradients();
+      let batchLoss = 0.0;
+      
+      for (const sample of batch) {
+        const grads = nn.backprop(sample.input, sample.target, currentPreset);
+        nn.accumulateGradients(grads);
+        batchLoss += nn.computeLoss(grads.activations[nn.numLayers - 1], sample.target, currentPreset);
+      }
+      
+      const lastSample = batch[batch.length - 1];
+      const singleGrad = nn.backprop(lastSample.input, lastSample.target, currentPreset);
+      visualizer.flashUpdatedWeights(singleGrad, lr);
+
+      nn.updateParameters(batchSize, lr);
+      batchesCount++;
+
+      const avgLoss = batchLoss / batchSize;
+      lossBadge.textContent = avgLoss.toFixed(4);
+
+      // Throttled evaluation: once every 40 batches (half epoch) to prevent frame drop stutter
+      if (batchesCount % 40 === 0) {
+        evaluateModel();
+      }
+    }
+
+    function evaluateModel() {
+      let testLoss = 0.0;
+      let correct = 0;
+      
+      for (const sample of testDataset) {
+        const res = nn.forward(sample.input, currentPreset);
+        const out = res.activations[nn.numLayers - 1];
+        testLoss += nn.computeLoss(out, sample.target, currentPreset);
+        
+        let maxIdx = 0;
+        for (let j = 1; j < 4; j++) {
+          if (out[j] > out[maxIdx]) maxIdx = j;
+        }
+        if (maxIdx === sample.label) correct++;
+      }
+      
+      const acc = (correct / testDataset.length) * 100;
+      const avgLoss = testLoss / testDataset.length;
+      
+      epochsCount++;
+      epochBadge.textContent = epochsCount;
+      lossBadge.textContent = avgLoss.toFixed(4);
+      accuracyBadge.textContent = `${acc.toFixed(1)}%`;
+      
+      lossChart.addPoint(avgLoss);
+      accuracyChart.addPoint(acc);
+    }
+
+    function runNumericalGradientCheck() {
+      const sample = trainDataset[0] || datasetGen.generateSample(0, 0.05, false);
+      const epsilon = 1e-5;
+      const l = 1;
+      const j = 0;
+      const k = 0;
+      
+      const grads = nn.backprop(sample.input, sample.target, currentPreset);
+      const analyticalGrad = grads.sample_d_weights[l][j][k];
+      
+      const originalW = nn.weights[l][j][k];
+      
+      nn.weights[l][j][k] = originalW + epsilon;
+      const actPlus = nn.forward(sample.input, currentPreset);
+      const lossPlus = nn.computeLoss(actPlus.activations[nn.numLayers - 1], sample.target, currentPreset);
+      
+      nn.weights[l][j][k] = originalW - epsilon;
+      const actMinus = nn.forward(sample.input, currentPreset);
+      const lossMinus = nn.computeLoss(actMinus.activations[nn.numLayers - 1], sample.target, currentPreset);
+      
+      nn.weights[l][j][k] = originalW;
+      
+      const numericalGrad = (lossPlus - lossMinus) / (2.0 * epsilon);
+      const diff = Math.abs(numericalGrad - analyticalGrad);
+      
+      alert(`--- Numerical Gradient Check ---
+Connecting Layer 1 (Hidden 1) to Layer 2 (Hidden 2)
+Weight indexes: W[${l}][${j}][${k}]
+
+Analytical Gradient: ${analyticalGrad.toFixed(7)}
+Numerical Gradient:  ${numericalGrad.toFixed(7)}
+Absolute Difference: ${diff.toExponential(4)}
+
+Status: ${diff < 1e-4 ? 'PASSED (Backpropagation math is correct!)' : 'FAILED'}`);
+    }
+
+    function enterSlowMotion() {
+      isTraining = false;
+      document.getElementById('trainBtn').textContent = 'Train (Play)';
+      document.getElementById('trainBtn').className = 'btn btn-primary';
+
+      isSlowMoMode = true;
+      slowMoStep = 0;
+      
+      let sum = 0;
+      for(let i=0; i<784; i++) sum += currentInputActivations[i];
+      if (sum < 1.0) {
+        pad.drawPreset(0);
+      }
+      
+      slowMoSample = {
+        input: currentInputActivations,
+        target: new Float32Array([1.0, 0.0, 0.0, 0.0])
+      };
+
+      slowMoBtn.textContent = 'Exit Slow Motion';
+      slowMoBtn.style.color = '#ff4f4f';
+      slowMoBtn.style.borderColor = '#ff4f4f';
+      stepperControls.style.display = 'flex';
+
+      updateSlowMoStep();
+    }
+
+    function exitSlowMotion() {
+      isSlowMoMode = false;
+      slowMoBtn.textContent = 'Enter Slow Motion Mode';
+      slowMoBtn.style.color = 'var(--accent)';
+      slowMoBtn.style.borderColor = 'var(--accent)';
+      stepperControls.style.display = 'none';
+
+      captionHeader.textContent = 'Concept & Insights';
+      captionText.textContent = 'In standard training mode, the network learns continuously. Hovering over Layer 1 neurons reveals their spatial filter representation, showing what shape features they seek!';
+      document.getElementById('mathFormula').innerHTML = `a<sub>j</sub><sup>(l)</sup> = &sigma;( z<sub>j</sub><sup>(l)</sup> ) = &sigma;( &sum; w<sub>jk</sub> a<sub>k</sub><sup>(l-1)</sup> + b<sub>j</sub> )`;
+      document.getElementById('mathValues').innerHTML = `Hover over any neuron or line to see real-time matrix multiplication math.`;
+      
+      const res = nn.forward(currentInputActivations, currentPreset);
+      visualizer.render(res.activations);
+    }
+
+    function updateSlowMoStep() {
+      const step = SLOW_MO_STEPS[slowMoStep];
+      stepTitle.textContent = `Slow Motion: ${step.title}`;
+      captionHeader.textContent = step.header;
+      captionText.textContent = step.caption;
+      
+      step.action(visualizer);
+    }
+
+    let lastTime = 0;
+    function tick(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      lastTime = timestamp;
+
+      // 1. Run network training steps in background
+      if (isTraining && !isSlowMoMode) {
+        animationSpeed = parseInt(speedSlider.value);
+        for (let s = 0; s < animationSpeed; s++) {
+          runStepBatch();
+        }
+      }
+
+      // 2. Render once per frame (60 FPS). Decoupled from input handlers!
+      if (!isSlowMoMode) {
+        const res = nn.forward(currentInputActivations, currentPreset);
+        
+        // Throttled particle cascades during play/pause training
+        if (isTraining) {
+          pulseThrottleCounter++;
+          if (pulseThrottleCounter % 20 === 0) {
+            visualizer.spawnPulses('forward');
+          }
+        }
+        
+        visualizer.render(res.activations);
+        updateOutputBars(res.activations[3]);
+      } else {
+        visualizer.render(null); 
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('DOMContentLoaded', setupApp);
+  </script>
+</body>
+</html>

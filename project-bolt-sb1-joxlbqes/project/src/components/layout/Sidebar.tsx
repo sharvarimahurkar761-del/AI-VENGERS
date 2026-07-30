@@ -1,7 +1,7 @@
-import { Activity, LayoutDashboard, Users, Repeat, HeartPulse, Brain } from 'lucide-react';
+import { Activity, LayoutDashboard, Users, Repeat, HeartPulse, Brain, Network, Target } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-export type ViewKey = 'dashboard' | 'think' | 'customers' | 'outcomes' | 'health';
+export type ViewKey = 'dashboard' | 'think' | 'customers' | 'outcomes' | 'health' | 'neural' | 'reinforcement';
 
 const NAV: { key: ViewKey; label: string; icon: typeof Activity; hint: string }[] = [
   { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, hint: 'KPIs & risk mix' },
@@ -9,6 +9,8 @@ const NAV: { key: ViewKey; label: string; icon: typeof Activity; hint: string }[
   { key: 'customers', label: 'Customers', icon: Users, hint: 'At-risk roster' },
   { key: 'outcomes', label: 'Feedback Loop', icon: Repeat, hint: 'Outcomes & retrain' },
   { key: 'health', label: 'System Health', icon: HeartPulse, hint: 'Service status' },
+  { key: 'neural', label: 'Neural', icon: Network, hint: 'RL Policy' },
+  { key: 'reinforcement', label: 'Reinforcement', icon: Target, hint: 'RL Policy' },
 ];
 
 export function Sidebar({
