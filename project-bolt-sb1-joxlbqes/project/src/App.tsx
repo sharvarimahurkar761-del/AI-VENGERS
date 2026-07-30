@@ -48,9 +48,9 @@ function App() {
 
       <div className="relative z-10 flex min-w-0 flex-1 flex-col">
         <MobileNav view={view} onNavigate={navigate} />
-        <div className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <div className="w-full flex-1 flex flex-col px-4 py-6 sm:px-6 lg:px-8">
           <Topbar title={meta.title} subtitle={meta.subtitle} busy={busy} />
-          <main className="mt-6">
+          <main className="mt-6 flex-1 flex flex-col">
             {view === 'dashboard' && <DashboardView onNavigate={navigate} />}
             {view === 'think' && <ThinkView initialCustomerId={analyzeId} />}
             {view === 'customers' && (
