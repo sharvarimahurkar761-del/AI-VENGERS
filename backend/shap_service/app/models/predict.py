@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from app.models.model import RiskPredictionModel
 
-MODEL_DIR = Path("app/models")
+MODEL_DIR = Path(__file__).resolve().parent
 
 scaler = joblib.load(MODEL_DIR / "scaler.pkl")
 

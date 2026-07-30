@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from app.models.model import RiskPredictionModel
 
-MODEL_DIR = Path("app/models")
+MODEL_DIR = Path(__file__).resolve().parent.parent / "models"
 
 FEATURE_NAMES = [
     "usage_decline",
@@ -36,11 +36,8 @@ model.eval()
 # Background samples for SHAP
 background = X_train[:5]
 
-try:
-    explainer = shap.DeepExplainer(model, background)
-except Exception:
-    explainer = shap.GradientExplainer(model, background)
-
+# Use GradientExplainer as DeepExplainer has a known PyTorch size mismatch bug during shap_values()
+explainer = shap.GradientExplainer(model, background)
 
 def explain_customer(customer_features):
     """
