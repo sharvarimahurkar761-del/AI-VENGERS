@@ -25,7 +25,14 @@ class Simulator:
         if force_risk_score is not None:
             risk_profile['risk_score'] = force_risk_score
             
-        kg_response = self.kg_client.get_knowledge_response(user_id, "mock issue text")
+        issue_texts = {
+            'usage_decline': "I haven't logged in for a week, the new dashboard is confusing.",
+            'negative_sentiment': "This app is terrible and nothing works right!",
+            'support_delay': "I've been waiting for 3 days for a reply on my ticket.",
+            'onboarding_gap': "How do I invite my team members to the workspace?"
+        }
+        issue_text = issue_texts.get(true_cause, "General inquiry.")
+        kg_response = self.kg_client.get_knowledge_response(user_id, issue_text)
         
         best_action = self.ground_truth[true_cause]
         
