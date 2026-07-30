@@ -1,14 +1,41 @@
-.venv/
+# Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*$py.class
 *.pyc
+
+# Virtual Environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+
+# Testing/Coverage
 .pytest_cache/
+.coverage
+htmlcov/
 
-app/**/__pycache__/
-tests/**/__pycache__/
+# Logs
+logs/
+*.log
 
+# Data
 *.pkl
 *.pth
-
 data/shap_bar.png
-
-.vscode/
+data/raw_docs/*
+!data/raw_docs/.gitkeep
+!data/raw_docs/*.md
+!data/raw_docs/*.txt
+data/processed/*
+!data/processed/.gitkeep

@@ -1,0 +1,12 @@
+[
+    {"category": "answerable", "query": "How do I hook up my account to Slack so I can get alerts there?"},
+    {"category": "answerable", "query": "I'm a DevOps engineer, can I drag and drop stuff on the UI to see my error rates?"},
+    {"category": "answerable", "query": "My REST API export keeps failing with a 504 Gateway Timeout error for 60 day periods, what's wrong?"},
+    {"category": "answerable", "query": "I need to dump out all my logs into a CSV or PDF for compliance, how?"},
+    {"category": "borderline", "query": "Can I integrate with Microsoft Teams?"},
+    {"category": "borderline", "query": "How do I create a custom widget for the dashboard?"},
+    {"category": "borderline", "query": "What is the specific 2FA app I need to use to verify my identity for a full export?"},
+    {"category": "unanswerable", "query": "How much does the Enterprise Tier cost?"},
+    {"category": "unanswerable", "query": "Can I pay using a wire transfer or just credit cards?"},
+    {"category": "unanswerable", "query": "Does PulseIQ have a mobile app for iOS?"}
+]
