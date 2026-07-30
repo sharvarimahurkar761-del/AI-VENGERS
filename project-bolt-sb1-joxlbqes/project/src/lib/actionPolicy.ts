@@ -7,7 +7,7 @@ import type {
   PolicyDecision,
   RiskBand,
 } from './types';
-import { supabase } from './supabase';
+import { supabase, supabaseAvailable } from './supabase';
 
 // ---- P3 — Action Policy & Feedback Loop ----
 // Mirrors the already-built action_policy/ FastAPI service:
@@ -153,9 +153,44 @@ export async function decide(
 }
 
 // ---- Persistence: outcomes table ----
+// Uses Supabase when configured, otherwise falls back to the backend API.
 
 export async function logDecision(decision: PolicyDecision): Promise<OutcomeRecord> {
-  const row = {
+  // Try backend API first
+  try {
+    const res = await fetch('http://localhost:8000/policy/outcome', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision }),
+    });
+    if (res.ok) return mapRow(await res.json());
+  } catch { /* fall through */ }
+
+  // Supabase fallback
+  if (supabaseAvailable) {
+    const row = {
+      customer_id: decision.customer_id,
+      customer_name: decision.customer_name,
+      risk_score: decision.risk_score,
+      risk_band: decision.risk_band,
+      top_attribution: decision.top_attribution,
+      selected_action: decision.selected_action,
+      knowledge_response: decision.knowledge_response,
+      confidence: decision.knowledge_confidence,
+      outcome: 'pending' as const,
+    };
+    const { data, error } = await supabase
+      .from('outcomes')
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapRow(data);
+  }
+
+  // In-memory fallback when neither backend nor Supabase is available
+  const record: OutcomeRecord = {
+    id: crypto.randomUUID(),
     customer_id: decision.customer_id,
     customer_name: decision.customer_name,
     risk_score: decision.risk_score,
@@ -164,38 +199,70 @@ export async function logDecision(decision: PolicyDecision): Promise<OutcomeReco
     selected_action: decision.selected_action,
     knowledge_response: decision.knowledge_response,
     confidence: decision.knowledge_confidence,
-    outcome: 'pending' as const,
+    outcome: 'pending',
+    created_at: new Date().toISOString(),
+    resolved_at: null,
   };
-  const { data, error } = await supabase
-    .from('outcomes')
-    .insert(row)
-    .select()
-    .single();
-  if (error) throw error;
-  return mapRow(data);
+  inMemoryOutcomes.unshift(record);
+  return record;
 }
 
+// In-memory store for when no persistence backend is available
+const inMemoryOutcomes: OutcomeRecord[] = [];
+
 export async function listOutcomes(): Promise<OutcomeRecord[]> {
-  const { data, error } = await supabase
-    .from('outcomes')
-    .select('*')
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map(mapRow);
+  // Try backend API
+  try {
+    const res = await fetch('http://localhost:8000/policy/aggregate');
+    // If backend is up, we get aggregate data but not raw outcomes
+    // Fall through to supabase or in-memory
+  } catch { /* fall through */ }
+
+  if (supabaseAvailable) {
+    const { data, error } = await supabase
+      .from('outcomes')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []).map(mapRow);
+  }
+
+  return inMemoryOutcomes;
 }
 
 export async function logOutcome(
   id: string,
   outcome: 'success' | 'failure'
 ): Promise<OutcomeRecord> {
-  const { data, error } = await supabase
-    .from('outcomes')
-    .update({ outcome, resolved_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  return mapRow(data);
+  // Try backend API
+  try {
+    const res = await fetch('http://localhost:8000/policy/outcome/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, outcome }),
+    });
+    if (res.ok) return mapRow(await res.json());
+  } catch { /* fall through */ }
+
+  if (supabaseAvailable) {
+    const { data, error } = await supabase
+      .from('outcomes')
+      .update({ outcome, resolved_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapRow(data);
+  }
+
+  // In-memory fallback
+  const rec = inMemoryOutcomes.find((r) => r.id === id);
+  if (rec) {
+    rec.outcome = outcome;
+    rec.resolved_at = new Date().toISOString();
+    return rec;
+  }
+  throw new Error(`Outcome ${id} not found`);
 }
 
 export async function retrain(): Promise<{ retrained: boolean; model_version: string }> {
@@ -213,6 +280,13 @@ export async function retrain(): Promise<{ retrained: boolean; model_version: st
 }
 
 export async function aggregate(): Promise<AggregateResponse> {
+  // Try backend API first
+  try {
+    const res = await fetch('http://localhost:8000/policy/aggregate');
+    if (res.ok) return await res.json();
+  } catch { /* fall through */ }
+
+  // Local computation from available outcomes
   const rows = await listOutcomes();
   const byAction: Record<string, { count: number; success_rate: number }> = {};
   const byRoot: Record<string, { count: number; riskSum: number }> = {};
