@@ -1,0 +1,44 @@
+{
+  "usage_decline": {
+    "type": "float",
+    "unit": "ratio",
+    "refresh": "daily",
+    "description": "Decrease in product usage."
+  },
+  "tickets_last30": {
+    "type": "integer",
+    "unit": "count",
+    "refresh": "daily",
+    "description": "Support tickets raised in the last 30 days."
+  },
+  "negative_sentiment": {
+    "type": "float",
+    "unit": "score",
+    "refresh": "daily",
+    "description": "Negative customer sentiment derived from feedback."
+  },
+  "feature_dropout": {
+    "type": "float",
+    "unit": "ratio",
+    "refresh": "daily",
+    "description": "Proportion of important features not being used."
+  },
+  "active_days": {
+    "type": "integer",
+    "unit": "days/week",
+    "refresh": "daily",
+    "description": "Number of active days in a week."
+  },
+  "support_delay": {
+    "type": "float",
+    "unit": "hours",
+    "refresh": "daily",
+    "description": "Average support response delay."
+  },
+  "payment_delay": {
+    "type": "float",
+    "unit": "days",
+    "refresh": "daily",
+    "description": "Delay in customer payments."
+  }
+}
