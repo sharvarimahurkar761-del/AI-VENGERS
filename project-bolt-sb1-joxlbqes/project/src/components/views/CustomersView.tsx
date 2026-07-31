@@ -6,12 +6,11 @@ import { bandMeta, featureMeta, fmtPct } from '@/lib/ui';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card, RiskBandPill, Spinner } from '@/components/ui/Card';
 import { ActionIcon } from '@/components/ui/ActionIcon';
-import type { ViewKey } from '@/components/layout/Sidebar';
 import type { RiskBand } from '@/lib/types';
 
 type SortKey = 'risk' | 'name' | 'value';
 
-export function CustomersView({ onNavigate, onAnalyze }: { onNavigate: (v: ViewKey) => void; onAnalyze: (id: string) => void }) {
+export function CustomersView({ onAnalyze }: { onAnalyze: (id: string) => void }) {
   const { rows, ready } = useAllRiskScores();
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<SortKey>('risk');

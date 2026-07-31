@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Check, X, Repeat, TrendingUp, AlertCircle, History } from 'lucide-react';
-import { aggregate, featureLabel, listOutcomes, logOutcome, retrain } from '@/lib/actionPolicy';
-import { actionLabel } from '@/lib/actionPolicy';
+import { aggregate, listOutcomes, logOutcome, retrain, actionLabel } from '@/lib/actionPolicy';
 import { bandMeta, featureMeta, fmtPct, timeAgo } from '@/lib/ui';
 import { ActionIcon } from '@/components/ui/ActionIcon';
 import { Card, KpiCard, SectionTitle, Spinner } from '@/components/ui/Card';
-import type { AggregateResponse, OutcomeRecord } from '@/lib/types';
+import type { AggregateResponse, OutcomeRecord, RiskBand, ActionType } from '@/lib/types';
 
 export function OutcomesView() {
   const [outcomes, setOutcomes] = useState<OutcomeRecord[] | null>(null);
@@ -108,10 +107,10 @@ export function OutcomesView() {
                       <div
                         className="h-full origin-left rounded-full animate-scoreFill"
                         style={{
-                          ['--fill' as any]: rc.count / maxCount,
+                          '--fill': rc.count / maxCount,
                           background: `linear-gradient(90deg, ${m.hex}55, ${m.hex})`,
                           animationDelay: `${i * 80 + 100}ms`,
-                        }}
+                        } as React.CSSProperties}
                       />
                     </div>
                   </div>
@@ -152,7 +151,7 @@ export function OutcomesView() {
                         <div className="h-2 overflow-hidden rounded-full bg-white/5">
                           <div
                             className="h-full origin-left rounded-full bg-gradient-to-r from-pulse-500 to-emerald-400 animate-scoreFill"
-                            style={{ ['--fill' as any]: stat.success_rate || 0.02, animationDelay: `${i * 90 + 120}ms` }}
+                            style={{ '--fill': stat.success_rate || 0.02, animationDelay: `${i * 90 + 120}ms` } as React.CSSProperties}
                           />
                         </div>
                       </div>
@@ -194,7 +193,7 @@ export function OutcomesView() {
                 </td></tr>
               )}
               {outcomes?.map((o) => {
-                const m = bandMeta(o.risk_band as any);
+                const m = bandMeta(o.risk_band as RiskBand);
                 const driver = featureMeta(o.top_attribution);
                 return (
                   <tr key={o.id} className="transition hover:bg-white/[0.02]">
@@ -210,8 +209,8 @@ export function OutcomesView() {
                     </td>
                     <td className="px-3 py-3">
                       <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
-                        <ActionIcon action={o.selected_action as any} size={13} className="text-slate-400" />
-                        {actionLabel(o.selected_action as any)}
+                        <ActionIcon action={o.selected_action as ActionType} size={13} className="text-slate-400" />
+                        {actionLabel(o.selected_action as ActionType)}
                       </span>
                     </td>
                     <td className="px-3 py-3">

@@ -1,12 +1,13 @@
 import datetime
 
+
 class MemoryStore:
     def __init__(self):
         self.action_log = []
         self.outcome_log = []
 
     def log_action(self, user_id, action, risk_score, attributions, retrieval_confidence):
-        timestamp = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
         record = {
             'user_id': user_id,
             'action': action,
@@ -19,7 +20,7 @@ class MemoryStore:
         return record
 
     def log_outcome(self, user_id, action, metrics):
-        timestamp = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+        timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
         record = {
             'user_id': user_id,
             'action_id': action,

@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
@@ -8,4 +8,4 @@ export const supabaseAvailable = !!(url && anonKey);
 
 export const supabase = supabaseAvailable
   ? createClient(url, anonKey, { auth: { persistSession: false } })
-  : (null as any); // callers must check supabaseAvailable before using
+  : (null as unknown as SupabaseClient); // callers must check supabaseAvailable before using

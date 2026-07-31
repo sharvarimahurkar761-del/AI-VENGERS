@@ -103,11 +103,11 @@ export function DashboardView({ onNavigate }: { onNavigate: (v: ViewKey) => void
                     <div
                       className="h-full origin-left rounded-full animate-scoreFill"
                       style={{
-                        ['--fill' as any]: pct,
+                        '--fill': pct,
                         background: `linear-gradient(90deg, ${m.hex}66, ${m.hex})`,
                         boxShadow: `0 0 16px -4px ${m.hex}`,
                         animationDelay: `${i * 90 + 120}ms`,
-                      }}
+                      } as React.CSSProperties}
                     />
                   </div>
                 </div>

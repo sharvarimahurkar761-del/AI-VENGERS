@@ -1,3 +1,6 @@
+from shap_service.app.main import app as shap_app
+from rl_service.api import router as rl_router
+from rag_service.src.knowledge_assistant.api.main import app as rag_app
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sys
@@ -10,9 +13,6 @@ sys.path.append(os.path.join(backend_dir, "rag_service", "src"))
 sys.path.append(os.path.join(backend_dir, "shap_service"))
 sys.path.append(os.path.join(backend_dir, "rl_service"))
 
-from rag_service.src.knowledge_assistant.api.main import app as rag_app
-from rl_service.api import router as rl_router
-from shap_service.app.main import app as shap_app
 
 app = FastAPI(title="AI-VENGERS Unified API")
 
@@ -33,9 +33,11 @@ app.mount("/shap", shap_app)
 # Include the RL service router under /policy
 app.include_router(rl_router, prefix="/policy")
 
+
 @app.get("/health")
 def health():
     return {"status": "ok", "message": "Unified AI-VENGERS backend is running"}
+
 
 if __name__ == "__main__":
     import uvicorn

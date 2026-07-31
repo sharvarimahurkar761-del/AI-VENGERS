@@ -1,4 +1,4 @@
-import type { KnowledgeRequest, KnowledgeResponse, RetrievedDoc } from './types';
+import type { KnowledgeRequest, KnowledgeResponse } from './types';
 
 // ---- P2 — Knowledge Assistant (mock) ----
 // Real implementation: RAG + fine-tuned LLM (LoRA/QLoRA) grounded in company
@@ -7,14 +7,7 @@ import type { KnowledgeRequest, KnowledgeResponse, RetrievedDoc } from './types'
 
 export const KNOWLEDGE_MODEL_VERSION = 'pulse-llm-lora-v0.9.3';
 
-interface DocEntry {
-  id: string;
-  title: string;
-  source: string;
-  body: string;
-  // keywords that make this doc relevant to a root cause
-  triggers: string[];
-}
+
 
 export async function knowledgeRespond(req: KnowledgeRequest): Promise<KnowledgeResponse> {
   try {

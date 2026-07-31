@@ -22,7 +22,7 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
 function App() {
   const [view, setView] = useState<ViewKey>('dashboard');
   const [analyzeId, setAnalyzeId] = useState<string | undefined>(undefined);
-  const [busy, setBusy] = useState(false);
+  const [busy] = useState(false);
 
   function navigate(v: ViewKey) {
     setView(v);
@@ -54,7 +54,7 @@ function App() {
             {view === 'dashboard' && <DashboardView onNavigate={navigate} />}
             {view === 'think' && <ThinkView initialCustomerId={analyzeId} />}
             {view === 'customers' && (
-              <CustomersView onNavigate={navigate} onAnalyze={analyzeCustomer} />
+              <CustomersView onAnalyze={analyzeCustomer} />
             )}
             {view === 'outcomes' && <OutcomesView />}
             {view === 'health' && <HealthView />}

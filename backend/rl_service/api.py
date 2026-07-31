@@ -43,6 +43,7 @@ POLICY_RULES = {
     },
 }
 
+
 class DecideRequest(BaseModel):
     customer_id: str
     customer_name: str
@@ -52,10 +53,12 @@ class DecideRequest(BaseModel):
     knowledge_response: str
     knowledge_confidence: float
 
+
 class ActionScore(BaseModel):
     action: str
     score: float
     rationale: str
+
 
 class PolicyDecision(BaseModel):
     customer_id: str
@@ -70,6 +73,7 @@ class PolicyDecision(BaseModel):
     model_version: str
     timestamp: str
 
+
 def softmax_scores(pref: str, top_weight: float) -> List[ActionScore]:
     base = {
         'guided_tutorial': 0.2,
@@ -79,18 +83,21 @@ def softmax_scores(pref: str, top_weight: float) -> List[ActionScore]:
     }
     base[pref] = top_weight
     total = sum(base.values())
-    
+
     scores = []
     for a in ACTIONS:
         score = base[a] / total
         if a == pref:
-            rationale = POLICY_RULES.get(pref, {}).get('rationale', 'Highest expected value given the dominant risk driver.')
+            rationale = POLICY_RULES.get(pref, {}).get(
+                'rationale', 'Highest expected value given the dominant risk driver.')
         else:
             rationale = f"Lower expected value than {ACTION_LABELS[pref]} for this root cause."
-        scores.append(ActionScore(action=a, score=round(score, 3), rationale=rationale))
-    
+        scores.append(ActionScore(
+            action=a, score=round(score, 3), rationale=rationale))
+
     scores.sort(key=lambda x: x.score, reverse=True)
     return scores
+
 
 @router.post("/decide", response_model=PolicyDecision)
 def decide_action(req: DecideRequest):
@@ -98,10 +105,10 @@ def decide_action(req: DecideRequest):
         'action': 'proactive_nudge',
         'rationale': 'Default to a proactive nudge when the dominant driver is ambiguous.',
     })
-    
+
     chosen = rule['action']
     top_weight = 0.46
-    
+
     if req.risk_band == 'critical' and chosen != 'human_handoff':
         chosen = 'human_handoff'
         top_weight = 0.5
@@ -109,9 +116,9 @@ def decide_action(req: DecideRequest):
         top_weight = 0.34
     elif req.risk_band in ('high', 'critical'):
         top_weight = min(0.58, top_weight + 0.1)
-        
+
     action_scores = softmax_scores(chosen, top_weight)
-    
+
     return PolicyDecision(
         customer_id=req.customer_id,
         customer_name=req.customer_name,
@@ -123,11 +130,14 @@ def decide_action(req: DecideRequest):
         knowledge_response=req.knowledge_response,
         knowledge_confidence=req.knowledge_confidence,
         model_version=POLICY_MODEL_VERSION,
-        timestamp=datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+        timestamp=datetime.datetime.now(
+            datetime.timezone.utc).isoformat() + "Z"
     )
+
 
 class LogOutcomeRequest(BaseModel):
     decision: dict
+
 
 @router.post("/outcome")
 def log_outcome(req: LogOutcomeRequest):
@@ -144,52 +154,58 @@ def log_outcome(req: LogOutcomeRequest):
         'knowledge_response': dec.get('knowledge_response'),
         'confidence': dec.get('knowledge_confidence'),
         'outcome': 'pending',
-        'created_at': datetime.datetime.now(datetime.UTC).isoformat() + "Z",
+        'created_at': datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z",
         'resolved_at': None
     }
     outcomes_db.insert(0, record)
     return record
 
+
 class UpdateOutcomeRequest(BaseModel):
     id: str
     outcome: str
+
 
 @router.post("/outcome/update")
 def update_outcome(req: UpdateOutcomeRequest):
     for record in outcomes_db:
         if record['id'] == req.id:
             record['outcome'] = req.outcome
-            record['resolved_at'] = datetime.datetime.now(datetime.UTC).isoformat() + "Z"
+            record['resolved_at'] = datetime.datetime.now(
+                datetime.timezone.utc).isoformat() + "Z"
             return record
     raise HTTPException(status_code=404, detail="Outcome not found")
+
 
 @router.post("/retrain")
 def retrain():
     return {"retrained": True, "model_version": POLICY_MODEL_VERSION}
 
+
 @router.get("/aggregate")
 def aggregate():
     by_action = {}
     by_root = {}
-    
+
     for r in outcomes_db:
         act = r['selected_action']
         if act not in by_action:
             by_action[act] = {'count': 0, 'success_rate': 0}
         by_action[act]['count'] += 1
-        
+
         root = r['top_attribution']
         if root not in by_root:
             by_root[root] = {'count': 0, 'riskSum': 0}
         by_root[root]['count'] += 1
         by_root[root]['riskSum'] += r['risk_score']
-        
+
     for a in by_action.keys():
         acts = [r for r in outcomes_db if r['selected_action'] == a]
         resolved = [r for r in acts if r['outcome'] != 'pending']
         success = len([r for r in resolved if r['outcome'] == 'success'])
-        by_action[a]['success_rate'] = success / len(resolved) if resolved else 0
-        
+        by_action[a]['success_rate'] = success / \
+            len(resolved) if resolved else 0
+
     def feature_label(feature):
         map_labels = {
             'onboarding_confusion': 'Onboarding confusion',
@@ -199,7 +215,7 @@ def aggregate():
             'engagement_drop': 'Engagement drop',
         }
         return map_labels.get(feature, feature)
-        
+
     by_root_cause = []
     for feature, v in by_root.items():
         by_root_cause.append({
@@ -209,7 +225,7 @@ def aggregate():
             'avg_risk': round(v['riskSum'] / v['count'], 3) if v['count'] else 0
         })
     by_root_cause.sort(key=lambda x: x['count'], reverse=True)
-    
+
     return {
         "total": len(outcomes_db),
         "by_action": by_action,
@@ -219,12 +235,15 @@ def aggregate():
         "last_retrain": None
     }
 
+
 class FeedbackPayload(BaseModel):
     user_id: str
     action: str
     feedback: str
 
+
 @router.post("/feedback")
 def receive_feedback(payload: FeedbackPayload):
-    print(f"\n[RL Engine] Received Feedback: {payload.feedback} for User {payload.user_id} on action '{payload.action}'\n")
+    print(
+        f"\n[RL Engine] Received Feedback: {payload.feedback} for User {payload.user_id} on action '{payload.action}'\n")
     return {"status": "success", "message": f"Feedback {payload.feedback} recorded for RL engine"}

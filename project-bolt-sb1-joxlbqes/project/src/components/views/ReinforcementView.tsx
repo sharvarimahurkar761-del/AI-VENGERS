@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Target, TrendingUp, UserCheck, ShieldAlert, ChevronRight } from 'lucide-react';
+import { Target, TrendingUp, ShieldAlert, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export function ReinforcementView() {
@@ -177,7 +177,7 @@ export function ReinforcementView() {
             </h3>
             
             <div className="flex flex-col gap-5 justify-center flex-1">
-              {policyRows.map((row, i) => {
+              {policyRows.map((row) => {
                 const currentAnimatedVal = row.old + (row.new - row.old) * eased;
                 const isWinner = row.new > row.old;
                 

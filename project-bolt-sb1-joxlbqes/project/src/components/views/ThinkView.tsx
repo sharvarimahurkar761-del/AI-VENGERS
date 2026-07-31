@@ -7,8 +7,6 @@ import {
   Play,
   RotateCcw,
   Sparkles,
-  TrendingUp,
-  TrendingDown,
   Check,
   Cpu,
 } from 'lucide-react';
@@ -23,6 +21,7 @@ import { ActionIcon } from '@/components/ui/ActionIcon';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, Card, Spinner, ThinkingDots } from '@/components/ui/Card';
 import { ProgressBar } from '@/components/ui/ProgressBar';
+import { ShapScene3D } from '@/components/views/ShapScene3D';
 import type { Attribution, KnowledgeResponse, PolicyDecision, RiskScoreResponse } from '@/lib/types';
 
 type Phase = 'idle' | 'risk' | 'knowledge' | 'policy' | 'done';
@@ -102,8 +101,8 @@ export function ThinkView({ initialCustomerId }: { initialCustomerId?: string })
       setOutcomeId(record.id);
       setStage(3, 'done');
       setPhase('done');
-    } catch (e: any) {
-      setError(e?.message ?? 'Analysis failed');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Analysis failed');
       setPhase('idle');
     }
   }
@@ -198,7 +197,7 @@ export function ThinkView({ initialCustomerId }: { initialCustomerId?: string })
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Left: SHAP / Risk */}
         <div className="space-y-6 lg:col-span-3">
-          <RiskPanel risk={risk} phase={phase} customer={customer} />
+          <RiskPanel risk={risk} phase={phase} />
           <KnowledgePanel knowledge={knowledge} phase={phase} />
         </div>
         {/* Right: action policy */}
@@ -210,7 +209,8 @@ export function ThinkView({ initialCustomerId }: { initialCustomerId?: string })
   );
 }
 
-function buildLocalQuery(attr: Attribution) {
+function buildLocalQuery(attr?: Attribution) {
+  if (!attr) return 'general churn risk';
   const f = attr.feature;
   if (f === 'onboarding_confusion') return 'onboarding_confusion stalled onboarding';
   if (f === 'repeated_failures') return 'repeated_failures support escalation';
@@ -308,11 +308,9 @@ function PipelineLine({ filled }: { filled: boolean }) {
 function RiskPanel({
   risk,
   phase,
-  customer,
 }: {
   risk: RiskScoreResponse | null;
   phase: Phase;
-  customer: { name: string; company: string; avatarHue: number; tier: string };
 }) {
   const loading = phase === 'risk' && !risk;
   return (
@@ -360,10 +358,8 @@ function RiskPanel({
               </h4>
               <span className="text-[10px] text-slate-600">signed contribution to risk</span>
             </div>
-            <div className="space-y-2.5">
-              {risk.attributions.map((a, i) => (
-                <ShapBar key={a.feature} attr={a} index={i} />
-              ))}
+            <div className="mt-4 animate-fadeUp" style={{ animationDelay: '300ms' }}>
+              <ShapScene3D attributions={risk.attributions} />
             </div>
           </div>
         </div>
@@ -372,39 +368,6 @@ function RiskPanel({
   );
 }
 
-function ShapBar({ attr, index }: { attr: Attribution; index: number }) {
-  const meta = featureMeta(attr.feature);
-  const width = Math.max(0.04, Math.abs(attr.value));
-  const increases = attr.value >= 0;
-  return (
-    <div className="group animate-fadeUp" style={{ animationDelay: `${index * 80}ms` }}>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="flex items-center gap-1.5 text-slate-300">
-          {increases ? <TrendingUp size={12} className="text-rose-400" /> : <TrendingDown size={12} className="text-emerald-400" />}
-          {meta.label}
-        </span>
-        <span className={`font-mono text-[11px] ${increases ? 'text-rose-300' : 'text-emerald-300'}`}>
-          {increases ? '+' : ''}{attr.value.toFixed(3)}
-        </span>
-      </div>
-      <div className="relative h-2.5 rounded-full bg-white/5">
-        {/* center axis */}
-        <div className="absolute left-1/2 top-0 h-full w-px bg-white/15" />
-        <div
-          className="absolute top-0 h-full origin-left animate-shap rounded-full"
-          style={{
-            left: increases ? '50%' : `${50 - width * 50}%`,
-            width: `${width * 50}%`,
-            background: `linear-gradient(90deg, ${meta.hex}55, ${meta.hex})`,
-            boxShadow: `0 0 14px -2px ${meta.hex}`,
-            animationDelay: `${index * 80}ms`,
-            transformOrigin: increases ? 'left center' : 'right center',
-          }}
-        />
-      </div>
-    </div>
-  );
-}
 
 function ScoreRing({ score, band }: { score: number; band: RiskScoreResponse['risk_band'] }) {
   const m = bandMeta(band);

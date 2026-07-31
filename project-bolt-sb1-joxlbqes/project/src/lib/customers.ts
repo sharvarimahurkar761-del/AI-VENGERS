@@ -52,7 +52,7 @@ export const customers: Customer[] = [
   ['c_010', 'Ravi Shankar', 'Nimbus Cloud', 'ravi@nimbus.cloud'],
   ['c_011', 'Greta Lindholm', 'Polar Foods', 'greta@polarfoods.se'],
   ['c_012', 'Omar Haddad', 'Sable Logistics', 'omar@sablelog.com'],
-].map(([id, name, company, email], i) => {
+].map(([id, name, company, email]) => {
   const r = hash(id + 'tier');
   const tier = tiers[Math.floor(r * 3)];
   const planValue = tier === 'Enterprise' ? 12000 : tier === 'Growth' ? 4500 : 990;

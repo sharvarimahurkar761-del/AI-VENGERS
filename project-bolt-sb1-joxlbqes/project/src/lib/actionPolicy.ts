@@ -213,7 +213,7 @@ const inMemoryOutcomes: OutcomeRecord[] = [];
 export async function listOutcomes(): Promise<OutcomeRecord[]> {
   // Try backend API
   try {
-    const res = await fetch('http://localhost:8000/policy/aggregate');
+    await fetch('http://localhost:8000/policy/aggregate');
     // If backend is up, we get aggregate data but not raw outcomes
     // Fall through to supabase or in-memory
   } catch { /* fall through */ }
@@ -334,20 +334,20 @@ export function featureLabel(feature: string): string {
   return map[feature] ?? feature;
 }
 
-function mapRow(r: any): OutcomeRecord {
+function mapRow(r: Record<string, unknown>): OutcomeRecord {
   return {
-    id: r.id,
-    customer_id: r.customer_id,
-    customer_name: r.customer_name,
+    id: r.id as string,
+    customer_id: r.customer_id as string,
+    customer_name: r.customer_name as string,
     risk_score: Number(r.risk_score),
-    risk_band: r.risk_band,
-    top_attribution: r.top_attribution,
-    selected_action: r.selected_action,
-    knowledge_response: r.knowledge_response,
+    risk_band: r.risk_band as RiskBand,
+    top_attribution: r.top_attribution as string,
+    selected_action: r.selected_action as ActionType,
+    knowledge_response: r.knowledge_response as string,
     confidence: Number(r.confidence),
-    outcome: r.outcome,
-    created_at: r.created_at,
-    resolved_at: r.resolved_at,
+    outcome: r.outcome as 'success' | 'failure' | 'pending',
+    created_at: r.created_at as string,
+    resolved_at: r.resolved_at as string | null,
   };
 }
 

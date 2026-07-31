@@ -39,6 +39,7 @@ background = X_train[:5]
 # Use GradientExplainer as DeepExplainer has a known PyTorch size mismatch bug during shap_values()
 explainer = shap.GradientExplainer(model, background)
 
+
 def explain_customer(customer_features):
     """
     Returns:
@@ -48,7 +49,8 @@ def explain_customer(customer_features):
     }
     """
 
-    customer_np = np.asarray(customer_features, dtype=np.float32).reshape(1, -1)
+    customer_np = np.asarray(
+        customer_features, dtype=np.float32).reshape(1, -1)
     customer = torch.FloatTensor(customer_np)
 
     with torch.no_grad():

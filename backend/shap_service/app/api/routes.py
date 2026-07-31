@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 
 from app.api.schemas import RiskRequest
-from app.models.predict import predict_risk
+
 from app.explainability.shap_engine import explain_customer
 
 router = APIRouter()

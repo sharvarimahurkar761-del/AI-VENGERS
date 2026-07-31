@@ -1,5 +1,6 @@
 import json
 
+
 class FeedbackLoop:
     @staticmethod
     def run_retraining_job(store, agent):
